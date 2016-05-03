@@ -1,0 +1,175 @@
+package robotServices.launcher
+
+import akka.actor._
+import com.codemettle.reactivemq.ReActiveMQMessages._
+import com.codemettle.reactivemq._
+import com.codemettle.reactivemq.model._
+import com.github.nscala_time.time.Imports._
+import com.typesafe.config.ConfigFactory
+import org.json4s.native.Serialization.write
+
+/**
+  * Created by Henrik on 2016-05-03.
+  */
+
+class testMessageSender extends Actor {
+  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
+
+  // Read from config file
+  val config = ConfigFactory.load()
+  val address = config.getString("activemq.address")
+  val user = config.getString("activemq.user")
+  val pass = config.getString("activemq.pass")
+  val readFrom = config.getString("service.tester.readFromTopic")
+  val writeTo = config.getString("service.tester.writeToTopic")
+
+  // The state
+  var theBus: Option[ActorRef] = None
+
+  // Functions
+  def receive = {
+    case "connect" =>
+      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
+    case ConnectionEstablished(request, c) =>
+      println("connected: " + request)
+      c ! ConsumeFromTopic(readFrom)
+      theBus = Some(c)
+      sendMessages()
+    case ConnectionFailed(request, reason) =>
+      println("failed: " + reason)
+    case mess @ AMQMessage(body, prop, headers) => // does nothing
+  }
+
+  def sendMessages() = {
+    val json10 = write(ModulesReadEvent("testId1", RobotDataAddress("rapid", "pointer", ""), List[TaskWithModules](
+      TaskWithModules("T_ROB1", 0, 0, 0, 0, List[Module](Module("testMod", false, false, false, false, false, false,
+        List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")), Module("testMod2", false, false, false,
+        false, false, false, List[String]("Move12", "Stop12", "Move22", "Stop22", "Move32", "Stop32")))),
+      TaskWithModules("T_ROB2", 0, 0, 0, 0, List[Module](Module("testMod", false, false, false, false, false, false,
+        List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")), Module("testMod2", false, false, false,
+        false, false, false, List[String]("Move12", "Stop12", "Move22", "Stop22", "Move32", "Stop32")))))))
+    println("json10: " + json10)
+    sendToBus(json10)
+
+    val json16 = write(ModulesReadEvent("testId2", RobotDataAddress("rapid", "pointer", ""), List[TaskWithModules](
+      TaskWithModules("T_ROB1", 0, 0, 0, 0, List[Module](Module("testMod", false, false, false, false, false, false,
+        List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")), Module("testMod2", false, false, false,
+        false, false, false, List[String]("Move12", "Stop12", "Move22", "Stop22", "Move32", "Stop32")))),
+      TaskWithModules("T_ROB2", 0, 0, 0, 0, List[Module](Module("testMod", false, false, false, false, false, false,
+        List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")))))))
+    println("json16: " + json16)
+    sendToBus(json16)
+
+    Thread.sleep(2000)
+
+    val json1: String = write(PointerChangedEvent("testId1", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB1", 0, 0, 0, 0), Position("testMod", "testRout", Range(Location(0,3), Location(5,5))),
+        getNow + 3000.millis)))
+    println("json1: " + json1)
+    sendToBus(json1)
+
+    Thread.sleep(1000)
+
+    val json: String = write(CycleStartEvent("testId1", getNow))
+    println(json)
+    sendToBus(json)
+
+    Thread.sleep(2000)
+
+    val json2: String = write(PointerChangedEvent("testId1", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB2", 0, 0, 0, 0), Position("testMod", "testRout", Range(Location(0,3), Location(5,5))),
+        getNow)))
+    println("json2: " + json2)
+    sendToBus(json2)
+
+    Thread.sleep(1000)
+
+    val json11 = write(TipDressEvent("testId1", RobotDataAddress("rapid", "data", ""), TipDressData(10,getNow)))
+    println("json11: " + json11)
+    sendToBus(json11)
+
+    Thread.sleep(1000)
+
+    val json6: String = write(CycleStartEvent("testId2", getNow))
+    println(json6)
+    sendToBus(json6)
+
+    Thread.sleep(2000)
+
+    val json7: String = write(PointerChangedEvent("testId2", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB2", 0, 0, 0, 0), Position("testMod", "testRout1", Range(Location(0,3),
+        Location(5,5))), getNow)))
+    println("json7: " + json7)
+    sendToBus(json7)
+
+    Thread.sleep(2000)
+
+    val json12: String = write(TipDressEvent("testId1", RobotDataAddress("rapid", "data", ""), TipDressData(8,getNow)))
+    println("json12: " + json12)
+    sendToBus(json12)
+
+    Thread.sleep(1000)
+
+    val json13: String = write(TipDressEvent("testId1", RobotDataAddress("rapid", "data", ""), TipDressData(6,getNow)))
+    println("json3: " + json13)
+    sendToBus(json13)
+
+    Thread.sleep(1000)
+
+    val json3: String = write(PointerChangedEvent("testId1", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB2", 0, 0, 0, 0), Position("testMod", "testRout1", Range(Location(0,3),
+        Location(5,5))), getNow)))
+    println("json3: " + json3)
+    sendToBus(json3)
+
+    Thread.sleep(2000)
+
+    val json4: String = write(CycleStopEvent("testId1", getNow))
+    println(json4)
+    sendToBus(json4)
+
+    val json8: String = write(CycleStopEvent("testId2", getNow))
+    println(json8)
+    sendToBus(json8)
+
+    val json14: String = write(TipDressEvent("testId1", RobotDataAddress("rapid", "data", ""), TipDressData(5,getNow)))
+    println("json14: " + json14)
+    sendToBus(json14)
+
+    Thread.sleep(1000)
+
+    val json9: String = write(PointerChangedEvent("testId2", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB2", 0, 0, 0, 0), Position("testMod", "testRout1", Range(Location(0,3),
+        Location(5,5))), getNow - 2000.millis)))
+    println("json9: " + json9)
+    sendToBus(json9)
+
+    Thread.sleep(2000)
+
+    val json5: String = write(PointerChangedEvent("testId1", RobotDataAddress("rapid", "pointer", ""),
+      PointerPosition(Task("T_ROB2", 0, 0, 0, 0), Position("testMod", "testRout1", Range(Location(0,3),
+        Location(5,5))), getNow - 4000.millis)))
+    println("json5: " + json5)
+    sendToBus(json5)
+
+    val json15: String = write(TipDressEvent("testId1", RobotDataAddress("rapid", "data", ""), TipDressData(3,getNow)))
+    println("json15: " + json15)
+    sendToBus(json15)
+  }
+
+  def sendToBus(json: String) = {
+    theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
+  }
+
+  override def postStop() = {
+    theBus.foreach(_ ! CloseConnection)
+  }
+
+  def getNow = {
+    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
+  }
+}
+
+object testMessageSender {
+  def props = Props[testMessageSender]
+}

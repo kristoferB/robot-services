@@ -1,0 +1,26 @@
+
+# sbt specific
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.history
+
+# Scala-IDE specific
+.scala_dependencies
+
+# Eclipse specific
+.project
+.classpath
+.cache
+project/target/
+.settings/
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+*.DS_Store
