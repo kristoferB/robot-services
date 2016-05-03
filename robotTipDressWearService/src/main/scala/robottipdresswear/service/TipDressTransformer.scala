@@ -19,6 +19,7 @@ class TipDressTransformer extends Actor {
 
   // Type aliases
   type RobotId = String
+  type NrOfDeviations = Int
 
   // Read from config file
   val config = ConfigFactory.load()
@@ -32,10 +33,11 @@ class TipDressTransformer extends Actor {
   var theBus: Option[ActorRef] = None
 
   // Local variables
+  var counter: Int = 0
   var currentSlope: Float = 0
-  var priorEvent: TipDressEvent = null
+  var priorEvent: Option[TipDressEvent] = None
   var averageSlopeMap: Map[RobotId, Option[Float]] = Map[RobotId, Option[Float]]()
-  var warnMap: Map[RobotId, Boolean] = Map[RobotId, Boolean]()
+  var warnMap: Map[RobotId, NrOfDeviations] = Map[RobotId, NrOfDeviations]()
 
   // Functions
   def receive = {
@@ -54,10 +56,10 @@ class TipDressTransformer extends Actor {
         val event: TipDressEvent = json.extract[TipDressEvent]
         warnMap = handleWarnMap(warnMap, event)
         averageSlopeMap = handleSlopeMap(averageSlopeMap, event)
-        if (priorEvent == null)
-          priorEvent = event
+        if (priorEvent.isEmpty)
+          priorEvent = Some(event)
         else {
-          currentSlope = differentiate(priorEvent, event)
+          currentSlope = differentiate(priorEvent.get, event)
           if (currentSlope <= 0)
             assessRiskOfCutterBreakdown(event)
           else {
@@ -70,12 +72,12 @@ class TipDressTransformer extends Actor {
       }
   }
 
-  def handleWarnMap(map: Map[RobotId, Boolean], event: TipDressEvent): Map[RobotId, Boolean] = {
-    var result = Map[RobotId, Boolean]()
+  def handleWarnMap(map: Map[RobotId, NrOfDeviations], event: TipDressEvent): Map[RobotId, NrOfDeviations] = {
+    var result = Map[RobotId, NrOfDeviations]()
     if (map.contains(event.robotId))
       result = map
     else
-      result = map + (event.robotId -> false)
+      result = map + (event.robotId -> 0)
     result
   }
 
@@ -89,13 +91,13 @@ class TipDressTransformer extends Actor {
   }
 
   def reset(event: TipDressEvent) = {
-    priorEvent = event
-    averageSlopeMap += (event.robotId -> None)
-    warnMap += (event.robotId -> false)
+    priorEvent = Some(event)
+    warnMap += (event.robotId -> 0)
   }
 
   def assessWarningNeed(event: TipDressEvent) = {
-    val warn = warnMap(event.robotId)
+    val nrOfWarnings: Int = warnMap(event.robotId)
+    val warn: Boolean = nrOfWarnings == 3
     if (warn) {
       val warningEvent: TipDressWarningEvent = TipDressWarningEvent(event.robotId, event.robotDataAddress, warn)
       val json = write(warningEvent)
@@ -107,12 +109,12 @@ class TipDressTransformer extends Actor {
     val averageSlope = averageSlopeMap(event.robotId)
     if (averageSlope.isDefined) {
       if(currentSlope > averageSlope.get * 0.8)
-        warnMap += (event.robotId -> true)
+        warnMap += (event.robotId -> (warnMap(event.robotId) + 1))
       else
-        warnMap += (event.robotId -> false)
+        warnMap += (event.robotId -> 0)
     }
     else
-      warnMap += (event.robotId -> false)
+      warnMap += (event.robotId -> 0)
     update(event)
   }
 
@@ -120,8 +122,10 @@ class TipDressTransformer extends Actor {
     if (averageSlopeMap(event.robotId).isEmpty)
       averageSlopeMap += (event.robotId -> Some(currentSlope))
     else
-      averageSlopeMap += (event.robotId -> Some((averageSlopeMap(event.robotId).get + currentSlope) / 2))
-    priorEvent = event
+      averageSlopeMap +=
+        (event.robotId -> Some((averageSlopeMap(event.robotId).get * counter + currentSlope) / (counter + 1)))
+    priorEvent = Some(event)
+    counter += 1
   }
 
   def differentiate(event1: TipDressEvent, event2: TipDressEvent): Float = {
