@@ -21,8 +21,9 @@ class CycleAggregator extends Actor {
   implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
-  type RobotId = String
-  type PointerChanges = List[PointerChangedEvent]
+  type RobotName = String
+  type WorkCellName = String
+  type RoutineChanges = List[RoutineChangedEvent]
 
   // Read from config file
   val config = ConfigFactory.load()
@@ -41,10 +42,12 @@ class CycleAggregator extends Actor {
   var elasticClient: Option[Client] = None
 
   // Local variables
-  var cycleEventsMap: Map[RobotId, PointerChanges] = Map[RobotId, PointerChanges]()
-  var earlyEventsMap: Map[RobotId, PointerChanges] = Map[RobotId, PointerChanges]()
-  var lateEventsMap: Map[RobotId, PointerChanges] = Map[RobotId, PointerChanges]()
-  var flagMap: Map[RobotId, Boolean] = Map[RobotId, Boolean]()
+  var cycleEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
+  var earlyEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
+  var lateEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
+  var flagMap: Map[WorkCellName, Boolean] = Map[WorkCellName, Boolean]()
+  var workCellMap: Map[WorkCellName, List[RobotName]] = Map[WorkCellName, List[RobotName]]()
+  //var flagMap: Map[RobotName, Boolean] = Map[RobotName, Boolean]()
 
   // Functions
   def receive = {
@@ -53,7 +56,7 @@ class CycleAggregator extends Actor {
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom) // change to writeTo to be able to utilize the testMessageSender actor
+      c ! ConsumeFromTopic(readFrom)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
@@ -62,83 +65,112 @@ class CycleAggregator extends Actor {
       val json = parse(body.toString)
       if (json.has("cycleStart")) {
         val event: CycleStartEvent = json.extract[CycleStartEvent]
-        flagMap += (event.robotId -> true)
+        flagMap += (event.workCellName -> true)
         handleEarlyEvents(event)
       } else if (json.has("cycleStop")) {
         val event: CycleStopEvent = json.extract[CycleStopEvent]
-        flagMap += (event.robotId -> false)
+        flagMap += (event.workCellName -> false)
         storeCycle(event, mess.properties.messageID)
-      } else if (json.has("programPointerPosition") & json.has("isWaiting")) {
-        val event: PointerChangedEvent = json.extract[PointerChangedEvent]
-        flagMap = handleFlagMap(flagMap,event.robotId)
-        if (flagMap(event.robotId)) {
+      } else if (json.has("startFlag") && json.has("routineName")) {
+        val event: RoutineChangedEvent = json.extract[RoutineChangedEvent]
+        workCellMap = handleWorkCellMap(workCellMap, event)
+        flagMap = handleFlagMap(flagMap, event.workCellName)
+        if (flagMap(event.workCellName)) {
           cycleEventsMap = handleEventsMap(cycleEventsMap, event)
         }
         else {
           earlyEventsMap = handleEventsMap(earlyEventsMap, event)
           lateEventsMap = handleEventsMap(lateEventsMap, event)
         }
+      } else if (json.has("robotCycleSearchQuery")) {
+        println("Not implemented yet...")
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
       }
   }
 
-  def handleFlagMap(map: Map[RobotId, Boolean], robotId: RobotId): Map[RobotId, Boolean] = {
-    var result = Map[RobotId, Boolean]()
-    if (map.contains(robotId))
-      result = map
-    else
-      result = map + (robotId -> false)
+  def handleWorkCellMap(map: Map[WorkCellName, List[RobotName]], event: RoutineChangedEvent):
+  Map[WorkCellName, List[RobotName]] = {
+    var result = Map[WorkCellName, List[RobotName]]()
+    if (map.contains(event.workCellName)) {
+      if (map(event.workCellName).contains(event.robotName))
+        result = map
+      else {
+        val newRobotList = map(event.workCellName) :+ event.robotName
+        result = map + (event.workCellName -> newRobotList)
+      }
+    } else {
+      result = map + (event.workCellName -> List[RobotName](event.robotName))
+    }
     result
   }
 
-  def handleEventsMap(map: Map[RobotId, PointerChanges], event: PointerChangedEvent): Map[RobotId, PointerChanges] = {
-    var result = Map[RobotId, PointerChanges]()
-    if (map.contains(event.robotId)) {
-      val newList: PointerChanges = map(event.robotId) :+ event
-      result = map + (event.robotId -> newList)
+  def handleFlagMap(map: Map[WorkCellName, Boolean], workCellName: WorkCellName): Map[WorkCellName, Boolean] = {
+    var result = Map[WorkCellName, Boolean]()
+    if (map.contains(workCellName))
+      result = map
+    else
+      result = map + (workCellName -> false)
+    result
+  }
+
+  def handleEventsMap(map: Map[RobotName, RoutineChanges], event: RoutineChangedEvent): Map[RobotName, RoutineChanges] = {
+    var result = Map[RobotName, RoutineChanges]()
+    if (map.contains(event.robotName)) {
+      val newList: RoutineChanges = map(event.robotName) :+ event
+      result = map + (event.robotName -> newList)
     } else
-      result = map + (event.robotId -> List[PointerChangedEvent](event))
+      result = map + (event.robotName -> List[RoutineChangedEvent](event))
     result
   }
 
   def handleEarlyEvents(startEvent: CycleStartEvent) = {
-    var unHandledEvents: PointerChanges = List[PointerChangedEvent]()
-    if (earlyEventsMap.contains(startEvent.robotId)) {
-      earlyEventsMap(startEvent.robotId).foreach(event => {
-        if (event.programPointerPosition.eventTime.isAfter(startEvent.cycleStart))
-          unHandledEvents = unHandledEvents :+ event
-      })
-      earlyEventsMap += (startEvent.robotId -> List.empty[PointerChangedEvent])
-      if (cycleEventsMap.contains(startEvent.robotId))
-        cycleEventsMap += (startEvent.robotId -> (unHandledEvents ::: cycleEventsMap(startEvent.robotId)))
-      else
-        cycleEventsMap += (startEvent.robotId -> unHandledEvents)
+    var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
+    if(workCellMap.contains(startEvent.workCellName)) {
+      workCellMap(startEvent.workCellName).foreach{robotName: RobotName =>
+        if (earlyEventsMap.contains(robotName)) {
+          earlyEventsMap(robotName).foreach{event =>
+            if (event.eventTime.isAfter(startEvent.cycleStart))
+              unHandledEvents = unHandledEvents :+ event
+          }
+          earlyEventsMap += (robotName -> List.empty[RoutineChangedEvent])
+          if (cycleEventsMap.contains(robotName))
+            cycleEventsMap += (robotName -> (unHandledEvents ::: cycleEventsMap(robotName)))
+          else
+            cycleEventsMap += (robotName -> unHandledEvents)
+        }
+      }
     }
   }
 
   def storeCycle(stopEvent: CycleStopEvent, elasticId: Option[String]) = {
-    if (cycleEventsMap.contains(stopEvent.robotId)) {
-      var unHandledEvents: PointerChanges = List[PointerChangedEvent]()
-      val localCycleEvents: PointerChanges = cycleEventsMap(stopEvent.robotId)
-      cycleEventsMap += (stopEvent.robotId -> List.empty[PointerChangedEvent])
-      val latestEventTime: DateTime = localCycleEvents.last.programPointerPosition.eventTime
-      // waits, asynchronously, for pointer changes which may arrive after cycle stop even though they should not
-      val asyncWait: Future[Unit] = Future { Thread.sleep(5000) }
-      asyncWait onSuccess {
-        case _ =>
-          if (lateEventsMap.contains(stopEvent.robotId)) {
-            val localLateEvents: PointerChanges = lateEventsMap(stopEvent.robotId)
-            lateEventsMap += (stopEvent.robotId -> List.empty[PointerChangedEvent])
-            localLateEvents.foreach(event => {
-              val eventTime: DateTime = event.programPointerPosition.eventTime
-              if (eventTime.isAfter(latestEventTime) & eventTime.isBefore(stopEvent.cycleStop))
-                unHandledEvents = unHandledEvents :+ event
-            })
+    // ADD MAP TO SAVE THE CYCLES FOR EACH ROBOT!
+    if(workCellMap.contains(stopEvent.workCellName)) {
+      workCellMap(stopEvent.workCellName).foreach{robotName: RobotName =>
+        if (cycleEventsMap.contains(robotName)) {
+          var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
+          val localCycleEvents: RoutineChanges = cycleEventsMap(robotName)
+          cycleEventsMap += (robotName -> List.empty[RoutineChangedEvent])
+          val latestEventTime: DateTime = localCycleEvents.last.eventTime
+          // waits, asynchronously, for pointer changes which may arrive after cycle stop even though they should not
+          val asyncWait: Future[Unit] = Future { Thread.sleep(5000) }
+          asyncWait onSuccess {
+            case _ =>
+              if (lateEventsMap.contains(robotName)) {
+                val localLateEvents: RoutineChanges = lateEventsMap(robotName)
+                lateEventsMap += (robotName -> List.empty[RoutineChangedEvent])
+                localLateEvents.foreach{event =>
+                  val eventTime: DateTime = event.eventTime
+                  if (eventTime.isAfter(latestEventTime) && eventTime.isBefore(stopEvent.cycleStop))
+                    unHandledEvents = unHandledEvents :+ event
+                }
+              }
+              val cycle: RoutineChanges = localCycleEvents ::: unHandledEvents
+              // STORE THE CYCLE INTO A MAP AND THEN SEND THE FULL MAP TO THE DB!
+              val json = write(Map[String, RoutineChanges]("Cycle" -> cycle))
+              sendToES(json, robotName, elasticId)
           }
-          val cycle: PointerChanges = localCycleEvents ::: unHandledEvents
-          val json = write(Map[String, PointerChanges]("Cycle" -> cycle))
-          sendToES(json, stopEvent.robotId, elasticId)
+        }
       }
     }
   }
@@ -147,11 +179,17 @@ class CycleAggregator extends Actor {
     theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
   }
 
-  def sendToES(json: String, robotId: RobotId, elasticId: Option[String]) = {
+  def sendToES(json: String, robotName: RobotName, elasticId: Option[String]) = {
     elasticClient.foreach{client => client.index(
-      index = "Cycles.".concat(robotId).toLowerCase, `type` = "cycle", id = elasticId,
+      index = "robot-cycle-store", `type` = "cycles", id = elasticId,
       data = json, refresh = true
     )}
+  }
+
+  def getFromES(json: String): String = {
+    println("Not implemented yet...")
+    val json = write("Not implemented yet...")
+    json
   }
 
   override def postStop() = {

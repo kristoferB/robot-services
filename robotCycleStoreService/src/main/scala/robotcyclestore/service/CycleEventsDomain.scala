@@ -7,11 +7,18 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(robotName: String,
+case class CycleStartEvent(workCellName: String,
                            cycleStart: DateTime)
 
-case class CycleStopEvent(robotName: String,
+case class CycleStopEvent(workCellName: String,
                           cycleStop: DateTime)
+
+// For routine change events
+case class RoutineChangedEvent(robotName: String,
+                               workCellName: String,
+                               startFlag: Boolean,
+                               routineName: String,
+                               eventTime: DateTime)
 
 // For program pointer events
 case class PointerChangedEvent(robotName: String,

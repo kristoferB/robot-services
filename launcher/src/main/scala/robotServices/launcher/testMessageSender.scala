@@ -73,7 +73,7 @@ class testMessageSender extends Actor {
 
     Thread.sleep(1000)
 
-    val json4: String = write(CycleStartEvent("testId1", getNow))
+    val json4: String = write(CycleStartEvent("1197919", getNow))
     println("json4: " + json4)
     sendToBus(json4)
 
@@ -94,7 +94,7 @@ class testMessageSender extends Actor {
 
     Thread.sleep(1000)
 
-    val json7: String = write(CycleStartEvent("testId2", getNow))
+    val json7: String = write(CycleStartEvent("1197919", getNow))
     println("json7: " + json7)
     sendToBus(json7)
 
@@ -130,11 +130,11 @@ class testMessageSender extends Actor {
 
     Thread.sleep(2000)
 
-    val json12: String = write(CycleStopEvent("testId1", getNow))
+    val json12: String = write(CycleStopEvent("1197919", getNow))
     println("json12: " + json12)
     sendToBus(json12)
 
-    val json13: String = write(CycleStopEvent("testId2", getNow))
+    val json13: String = write(CycleStopEvent("1197919", getNow))
     println("json13: " + json13)
     sendToBus(json13)
 

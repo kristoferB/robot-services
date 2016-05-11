@@ -7,10 +7,10 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(robotName: String,
+case class CycleStartEvent(workCellName: String,
                            cycleStart: DateTime)
 
-case class CycleStopEvent(robotName: String,
+case class CycleStopEvent(workCellName: String,
                           cycleStop: DateTime)
 
 // For the requestModules answer
