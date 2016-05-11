@@ -13,8 +13,6 @@ case class RoutineChangedEvent(robotName: String,
                                routineName: String,
                                eventTime: DateTime)
 
-case class WaitRoutinesList(routines: List[String])
-
 // For program pointer events
 case class PointerChangedEvent(robotName: String,
                                robotDataAddress: RobotDataAddress,
