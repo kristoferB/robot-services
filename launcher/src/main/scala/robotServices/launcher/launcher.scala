@@ -20,6 +20,10 @@ object launcher extends App {
   val waitTestActor = system.actorOf(robotiswaiting.service.PointerTransformer.props)
   waitTestActor ! "connect"
 
+  import robotroutinechange.service._
+  val routineChangeActor = system.actorOf(RoutineExtractor.props)
+  routineChangeActor ! "connect"
+
   import robotcyclestore.service._
   val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
   cycleAggregatorActor ! "connect"

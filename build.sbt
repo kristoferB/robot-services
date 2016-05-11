@@ -37,19 +37,22 @@ lazy val commonSettings = Seq(
     resolvers += "gphat" at "https://raw.github.com/gphat/mvn-repo/master/releases/"
 )
 lazy val root = project.in( file(".") ).
-  aggregate(robotPathService, robotIsWaitingService, robotCycleStoreService, robotTipDressWearService, launcher)
+  aggregate(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
+    robotTipDressWearService, launcher)
 
 lazy val robotPathService = project.settings(commonSettings: _*)
 
 lazy val robotIsWaitingService = project.settings(commonSettings: _*)
+
+lazy val robotRoutineChangeService = project.settings(commonSettings: _*)
 
 lazy val robotCycleStoreService = project.settings(commonSettings: _*)
 
 lazy val robotTipDressWearService = project.settings(commonSettings: _*)
 
 lazy val launcher = project.
-  dependsOn(robotPathService, robotIsWaitingService, robotCycleStoreService, robotTipDressWearService).
-  settings(commonSettings: _*)
+  dependsOn(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
+    robotTipDressWearService).settings(commonSettings: _*)
 
 
 osgiSettings
