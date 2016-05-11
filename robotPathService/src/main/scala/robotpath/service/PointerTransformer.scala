@@ -18,7 +18,7 @@ class PointerTransformer extends Actor {
   implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
-  type RobotId = String
+  type RobotName = String
   type TaskName = String
   type ModuleName = String
   type Instruction = String
@@ -35,8 +35,8 @@ class PointerTransformer extends Actor {
   var theBus: Option[ActorRef] = None
 
   // Local variables
-  var robotMap: Map[RobotId, Map[TaskName, Map[ModuleName, Module]]] =
-    Map[RobotId, Map[TaskName, Map[ModuleName, Module]]]()
+  var robotMap: Map[RobotName, Map[TaskName, Map[ModuleName, Module]]] =
+    Map[RobotName, Map[TaskName, Map[ModuleName, Module]]]()
   var taskMap: Map[TaskName, Map[ModuleName, Module]] = Map[TaskName, Map[ModuleName, Module]]()
   var moduleMap: Map[ModuleName, Module] = Map[ModuleName, Module]()
 
@@ -61,7 +61,7 @@ class PointerTransformer extends Actor {
           taskMap += (task.name -> moduleMap)
           moduleMap = Map.empty[ModuleName, Module]
         })
-        robotMap += (event.robotId -> taskMap)
+        robotMap += (event.robotName -> taskMap)
         taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
       } else if (json.has("programPointerPosition") & !json.has("instruction")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
@@ -73,25 +73,25 @@ class PointerTransformer extends Actor {
 
   def fill(event: PointerChangedEvent) = {
     val eventPPPos = event.programPointerPosition
-    if (robotMap.contains(event.robotId)) {
-      if (robotMap(event.robotId).contains(eventPPPos.task.name)) {
-        if (robotMap(event.robotId)(eventPPPos.task.name).contains(eventPPPos.position.moduleName)) {
-          val module: Module = robotMap(event.robotId)(eventPPPos.task.name)(eventPPPos.position.moduleName)
+    if (robotMap.contains(event.robotName)) {
+      if (robotMap(event.robotName).contains(eventPPPos.task.name)) {
+        if (robotMap(event.robotName)(eventPPPos.task.name).contains(eventPPPos.position.moduleName)) {
+          val module: Module = robotMap(event.robotName)(eventPPPos.task.name)(eventPPPos.position.moduleName)
           val range: Range = eventPPPos.position.range
           val instruction: Instruction = module.programCode(range.begin.row).
             slice(range.begin.column, range.end.column + 1)
           val filledEvent: FilledPointerChangedEvent =
-            FilledPointerChangedEvent(event.robotId, event.robotDataAddress, instruction, eventPPPos)
+            FilledPointerChangedEvent(event.robotName, event.robotDataAddress, instruction, eventPPPos)
           val json = write(filledEvent)
           sendToBus(json)
         } else
-          println(s"The system ${event.robotId} does not contain the module called" +
+          println(s"The system ${event.robotName} does not contain the module called" +
             s"${eventPPPos.position.moduleName}")
       } else
-        println(s"The system ${event.robotId} does not contain the task called" +
+        println(s"The system ${event.robotName} does not contain the task called" +
           s"${eventPPPos.task.name}")
     } else
-      println(s"The system ${event.robotId} does not exist in the robot map.")
+      println(s"The system ${event.robotName} does not exist in the robot map.")
   }
 
   def requestModules() = {

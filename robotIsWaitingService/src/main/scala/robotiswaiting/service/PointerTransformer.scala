@@ -77,7 +77,7 @@ class PointerTransformer extends Actor {
     if (instruction.startsWith("Wait")) {
       isWaiting = true
     }
-    val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotId, event.robotDataAddress,
+    val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotName, event.robotDataAddress,
       instruction, isWaiting, event.programPointerPosition)
     val json: String = write(filledEvent)
     sendToBus(json)
