@@ -8,13 +8,14 @@ import com.github.nscala_time.time.Imports._
 
 // For routine change events
 case class RoutineChangedEvent(robotName: String,
-                               workcellName: String,
+                               workCellName: String,
                                startFlag: Boolean,
                                routineName: String,
                                eventTime: DateTime)
 
 // For program pointer events
 case class PointerChangedEvent(robotName: String,
+                               workCellName: String,
                                robotDataAddress: RobotDataAddress,
                                instruction: String,
                                isWaiting: Boolean,

@@ -8,16 +8,18 @@ import com.github.nscala_time.time.Imports._
 
 // For tip dress events
 case class TipDressWarningEvent(robotName: String,
+                                workCellName: String,
                                 robotDataAddress: RobotDataAddress,
                                 cutterWarning: Boolean)
 
 case class TipDressEvent(robotName: String,
+                         workCellName: String,
                          robotDataAddress: RobotDataAddress,
                          tipDressData: TipDressData)
-
-case class TipDressData(tipDressWear: Float,
-                        eventTime: DateTime)
 
 case class RobotDataAddress(domain: String,
                             kind: String,
                             path: String)
+
+case class TipDressData(tipDressWear: Float,
+                        eventTime: DateTime)

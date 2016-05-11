@@ -56,14 +56,14 @@ class PointerTransformer extends Actor {
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom) // change to writeTo to be able to utilize the testMessageSender actor
+      c ! ConsumeFromTopic(readFrom)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
       import Helpers.JValueExtended
       val json = parse(body.toString)
-      if (json.has("programPointerPosition") & json.has("instruction") & !json.has("isWaiting")) {
+      if (json.has("programPointerPosition") && json.has("instruction") && !json.has("isWaiting")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
         fill(event)
       } else {
@@ -77,8 +77,8 @@ class PointerTransformer extends Actor {
     if (instruction.startsWith("Wait")) {
       isWaiting = true
     }
-    val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotName, event.robotDataAddress,
-      instruction, isWaiting, event.programPointerPosition)
+    val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotName, event.workCellName,
+      event.robotDataAddress, instruction, isWaiting, event.programPointerPosition)
     val json: String = write(filledEvent)
     sendToBus(json)
   }

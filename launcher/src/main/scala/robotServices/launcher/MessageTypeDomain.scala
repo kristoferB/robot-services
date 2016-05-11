@@ -15,8 +15,16 @@ case class CycleStopEvent(robotName: String,
 
 // For the requestModules answer
 case class ModulesReadEvent(robotName: String,
+                            workCellName: String,
                             address: RobotDataAddress,
                             readValue: List[TaskWithModules])
+
+case class TaskWithModules(name: String,
+                           `type`: Int,
+                           cycle: Int,
+                           executionType: Int,
+                           executionStatus: Int,
+                           modules: List[Module])
 
 case class Module(name: String,
                   isEncoded: Boolean,
@@ -27,15 +35,9 @@ case class Module(name: String,
                   isViewOnly: Boolean,
                   programCode: List[String])
 
-case class TaskWithModules(name: String,
-                           `type`: Int,
-                           cycle: Int,
-                           executionType: Int,
-                           executionStatus: Int,
-                           modules: List[Module])
-
 // For program pointer events
 case class PointerChangedEvent(robotName: String,
+                               workCellName: String,
                                robotDataAddress: RobotDataAddress,
                                programPointerPosition: PointerPosition)
 
@@ -65,6 +67,7 @@ case class Location(column: Int,
 
 // For tip dress data
 case class TipDressEvent(robotName: String,
+                         workCellName: String,
                          robotDataAddress: RobotDataAddress,
                          tipDressData: TipDressData)
 

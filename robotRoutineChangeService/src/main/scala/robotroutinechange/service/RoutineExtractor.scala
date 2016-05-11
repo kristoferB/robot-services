@@ -45,14 +45,14 @@ class RoutineExtractor extends Actor {
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom) // change to writeTo to be able to utilize the testMessageSender actor
+      c ! ConsumeFromTopic(readFrom)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
       import Helpers.JValueExtended
       val json = parse(body.toString)
-      if (json.has("programPointerPosition") & json.has("instruction") & json.has("isWaiting")) {
+      if (json.has("programPointerPosition") && json.has("instruction") && json.has("isWaiting")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
         priorEventMap = handlePriorEventMap(priorEventMap, event)
         handleEvent(event)
@@ -80,13 +80,15 @@ class RoutineExtractor extends Actor {
         var json: String = ""
         if (!isWaitingRoutine(priorRoutine)) {
           val routineStopEvent =
-            RoutineChangedEvent(event.robotName, "workcell", !startFlag, priorRoutine, event.programPointerPosition.eventTime)
+            RoutineChangedEvent(event.robotName, event.workCellName, !startFlag, priorRoutine,
+              event.programPointerPosition.eventTime)
           json = write(routineStopEvent)
           sendToBus(json)
         }
         if (!isWaitingRoutine(currentRoutine)) {
           val routineStartEvent =
-            RoutineChangedEvent(event.robotName, "workcell", startFlag, currentRoutine, event.programPointerPosition.eventTime)
+            RoutineChangedEvent(event.robotName, event.workCellName, startFlag, currentRoutine,
+              event.programPointerPosition.eventTime)
           json = write(routineStartEvent)
           sendToBus(json)
         }

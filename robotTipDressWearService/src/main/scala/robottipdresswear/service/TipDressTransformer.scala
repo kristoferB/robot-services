@@ -47,7 +47,7 @@ class TipDressTransformer extends Actor {
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom) // change to writeTo to be able to utilize the testMessageSender actor
+      c ! ConsumeFromTopic(readFrom)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
@@ -112,7 +112,8 @@ class TipDressTransformer extends Actor {
     val nrOfWarnings: Int = warnMap(event.robotName)
     val warn: Boolean = nrOfWarnings == 3
     if (warn) {
-      val warningEvent: TipDressWarningEvent = TipDressWarningEvent(event.robotName, event.robotDataAddress, warn)
+      val warningEvent: TipDressWarningEvent =
+        TipDressWarningEvent(event.robotName, event.workCellName, event.robotDataAddress, warn)
       val json = write(warningEvent)
       sendToBus(json)
     }
