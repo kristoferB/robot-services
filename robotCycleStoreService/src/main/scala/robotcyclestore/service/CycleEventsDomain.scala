@@ -7,14 +7,14 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(robotId: String,
+case class CycleStartEvent(robotName: String,
                            cycleStart: DateTime)
 
-case class CycleStopEvent(robotId: String,
+case class CycleStopEvent(robotName: String,
                           cycleStop: DateTime)
 
 // For program pointer events
-case class PointerChangedEvent(robotId: String,
+case class PointerChangedEvent(robotName: String,
                                robotDataAddress: RobotDataAddress,
                                instruction: String,
                                isWaiting: Boolean,
