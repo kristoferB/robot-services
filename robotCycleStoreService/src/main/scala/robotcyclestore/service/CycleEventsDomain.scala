@@ -20,6 +20,15 @@ case class RoutineChangedEvent(robotName: String,
                                routineName: String,
                                eventTime: DateTime)
 
+case class WorkCellCycle(workCellName: String,
+                         from: DateTime,
+                         to: DateTime,
+                         activities: Map[String, List[Routine]])
+
+case class Routine(name: String,
+                   from: DateTime,
+                   to: DateTime)
+
 // For program pointer events
 case class PointerChangedEvent(robotName: String,
                                robotDataAddress: RobotDataAddress,

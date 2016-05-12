@@ -47,7 +47,7 @@ class CycleAggregator extends Actor {
   var lateEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
   var flagMap: Map[WorkCellName, Boolean] = Map[WorkCellName, Boolean]()
   var workCellMap: Map[WorkCellName, List[RobotName]] = Map[WorkCellName, List[RobotName]]()
-  //var flagMap: Map[RobotName, Boolean] = Map[RobotName, Boolean]()
+  var workCellStartTimeMap: Map[WorkCellName, DateTime] = Map[WorkCellName, DateTime]()
 
   // Functions
   def receive = {
@@ -66,6 +66,7 @@ class CycleAggregator extends Actor {
       if (json.has("cycleStart")) {
         val event: CycleStartEvent = json.extract[CycleStartEvent]
         flagMap += (event.workCellName -> true)
+        workCellStartTimeMap += (event.workCellName -> event.cycleStart)
         handleEarlyEvents(event)
       } else if (json.has("cycleStop")) {
         val event: CycleStopEvent = json.extract[CycleStopEvent]
@@ -144,8 +145,9 @@ class CycleAggregator extends Actor {
   }
 
   def storeCycle(stopEvent: CycleStopEvent, elasticId: Option[String]) = {
-    // ADD MAP TO SAVE THE CYCLES FOR EACH ROBOT!
-    if(workCellMap.contains(stopEvent.workCellName)) {
+    if(workCellStartTimeMap.contains(stopEvent.workCellName) && workCellMap.contains(stopEvent.workCellName)) {
+      var activities: Map[RobotName, List[Routine]] = Map[RobotName, List[Routine]]()
+      val startTime = workCellStartTimeMap(stopEvent.workCellName)
       workCellMap(stopEvent.workCellName).foreach{robotName: RobotName =>
         if (cycleEventsMap.contains(robotName)) {
           var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
@@ -166,20 +168,54 @@ class CycleAggregator extends Actor {
                 }
               }
               val cycle: RoutineChanges = localCycleEvents ::: unHandledEvents
-              // STORE THE CYCLE INTO A MAP AND THEN SEND THE FULL MAP TO THE DB!
-              val json = write(Map[String, RoutineChanges]("Cycle" -> cycle))
-              sendToES(json, robotName, elasticId)
+              val packagedCycle: Option[List[Routine]] = packRoutines(cycle)
+              if (packagedCycle.isDefined)
+                activities += (robotName ->  packagedCycle.get)
           }
         }
       }
+      if (allRobotsInCycle(stopEvent.workCellName, activities)) {
+        val workCellCycle = WorkCellCycle(stopEvent.workCellName, startTime, stopEvent.cycleStop, activities)
+        val json = write(workCellCycle)
+        sendToES(json, elasticId)
+      }
     }
+  }
+
+  def packRoutines(cycle: RoutineChanges): Option[List[Routine]] = {
+    def helperFunction(routines: Option[RoutineChanges]): Option[List[Routine]] = routines match {
+      case Some(Nil) =>
+        Some(List.empty[Routine])
+      case Some(r1 :: r2 :: rs) =>
+        if (r1.startFlag && !r2.startFlag)  {
+          val activity = Routine(r1.routineName, r1.eventTime, r2.eventTime)
+          val rest = helperFunction(Some(rs))
+          if (rest.isDefined)
+            Some(activity :: rest.get)
+          else
+            None
+        } else
+          None
+      case _ => None
+    }
+    val combinedRoutines: Option[List[Routine]] = helperFunction(Some(cycle))
+    combinedRoutines
+  }
+
+  def allRobotsInCycle(workCellName: WorkCellName, activities: Map[RobotName, List[Routine]]): Boolean = {
+    val robotsInCycle = activities.keySet
+    val robotsInWorkCell = workCellMap(workCellName).toSet
+    if (robotsInWorkCell.diff(robotsInCycle).isEmpty)
+      true
+    else
+      false
   }
 
   def sendToBus(json: String) = {
     theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
   }
 
-  def sendToES(json: String, robotName: RobotName, elasticId: Option[String]) = {
+  def sendToES(json: String, elasticId: Option[String]) = {
     elasticClient.foreach{client => client.index(
       index = "robot-cycle-store", `type` = "cycles", id = elasticId,
       data = json, refresh = true
