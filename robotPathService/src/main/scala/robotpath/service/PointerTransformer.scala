@@ -61,7 +61,7 @@ class PointerTransformer extends Actor {
           taskMap += (task.name -> moduleMap)
           moduleMap = Map.empty[ModuleName, Module]
         })
-        robotMap += (event.robotName -> taskMap)
+        robotMap += (event.robotId -> taskMap)
         taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
       } else if (json.has("programPointerPosition") && !json.has("instruction")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
@@ -73,25 +73,25 @@ class PointerTransformer extends Actor {
 
   def fill(event: PointerChangedEvent) = {
     val eventPPPos = event.programPointerPosition
-    if (robotMap.contains(event.robotName)) {
-      if (robotMap(event.robotName).contains(eventPPPos.task.name)) {
-        if (robotMap(event.robotName)(eventPPPos.task.name).contains(eventPPPos.position.moduleName)) {
-          val module: Module = robotMap(event.robotName)(eventPPPos.task.name)(eventPPPos.position.moduleName)
+    if (robotMap.contains(event.robotId)) {
+      if (robotMap(event.robotId).contains(eventPPPos.task.name)) {
+        if (robotMap(event.robotId)(eventPPPos.task.name).contains(eventPPPos.position.moduleName)) {
+          val module: Module = robotMap(event.robotId)(eventPPPos.task.name)(eventPPPos.position.moduleName)
           val range: Range = eventPPPos.position.range
           val instruction: Instruction = module.programCode(range.begin.row).
             slice(range.begin.column, range.end.column + 1)
           val filledEvent: FilledPointerChangedEvent =
-            FilledPointerChangedEvent(event.robotName, event.workCellName, event.robotDataAddress, instruction, eventPPPos)
+            FilledPointerChangedEvent(event.robotId, event.workCellId, event.robotDataAddress, instruction, eventPPPos)
           val json = write(filledEvent)
           sendToBus(json)
         } else
-          println(s"The system ${event.robotName} does not contain the module called" +
+          println(s"The system ${event.robotId} does not contain the module called" +
             s"${eventPPPos.position.moduleName}")
       } else
-        println(s"The system ${event.robotName} does not contain the task called" +
+        println(s"The system ${event.robotId} does not contain the task called" +
           s"${eventPPPos.task.name}")
     } else
-      println(s"The system ${event.robotName} does not exist in the robot map.")
+      println(s"The system ${event.robotId} does not exist in the robot map.")
   }
 
   def requestModules() = {

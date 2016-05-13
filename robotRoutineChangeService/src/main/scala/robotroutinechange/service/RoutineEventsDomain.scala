@@ -7,15 +7,16 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For routine change events
-case class RoutineChangedEvent(robotName: String,
-                               workCellName: String,
-                               startFlag: Boolean,
+case class RoutineChangedEvent(robotId: String,
+                               workCellId: String,
+                               activityId: String,
+                               isStart: Boolean,
                                routineName: String,
                                eventTime: DateTime)
 
 // For program pointer events
-case class PointerChangedEvent(robotName: String,
-                               workCellName: String,
+case class PointerChangedEvent(robotId: String,
+                               workCellId: String,
                                robotDataAddress: RobotDataAddress,
                                instruction: String,
                                isWaiting: Boolean,

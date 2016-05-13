@@ -7,20 +7,21 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(workCellName: String,
+case class CycleStartEvent(workCellId: String,
                            cycleStart: DateTime)
 
-case class CycleStopEvent(workCellName: String,
+case class CycleStopEvent(workCellId: String,
                           cycleStop: DateTime)
 
 // For routine change events
-case class RoutineChangedEvent(robotName: String,
-                               workCellName: String,
-                               startFlag: Boolean,
+case class RoutineChangedEvent(robotId: String,
+                               workCellId: String,
+                               activityId: String,
+                               isStart: Boolean,
                                routineName: String,
                                eventTime: DateTime)
 
-case class WorkCellCycle(workCellName: String,
+case class WorkCellCycle(workCellId: String,
                          from: DateTime,
                          to: DateTime,
                          activities: Map[String, List[Routine]])
@@ -30,7 +31,7 @@ case class Routine(name: String,
                    to: DateTime)
 
 // For program pointer events
-case class PointerChangedEvent(robotName: String,
+case class PointerChangedEvent(robotId: String,
                                robotDataAddress: RobotDataAddress,
                                instruction: String,
                                isWaiting: Boolean,

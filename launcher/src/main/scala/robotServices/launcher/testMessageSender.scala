@@ -41,7 +41,7 @@ class testMessageSender extends Actor {
   }
 
   def sendMessages() = {
-    val flag: Boolean = false
+    /*val flag: Boolean = false
     val json1 = write(ModulesReadEvent("testId1", "1197919", RobotDataAddress("rapid", "pointer", ""),
       List[TaskWithModules](
       TaskWithModules("T_ROB1", 0, 0, 0, 0, List[Module](Module("testMod", flag, flag, flag, flag, flag, flag,
@@ -67,7 +67,7 @@ class testMessageSender extends Actor {
 
     val json3: String = write(PointerChangedEvent("testId1", "1197919", RobotDataAddress("rapid", "pointer", ""),
       PointerPosition(Task("T_ROB1", 0, 0, 0, 0), Position("testMod", "testRout", Range(Location(0,3), Location(5,5))),
-        getNow + 3000.millis)))
+        getNow))) // + 3000.millis
     println("json3: " + json3)
     sendToBus(json3)
 
@@ -91,12 +91,6 @@ class testMessageSender extends Actor {
       TipDressData(10,getNow)))
     println("json6: " + json6)
     sendToBus(json6)
-
-    Thread.sleep(1000)
-
-    val json7: String = write(CycleStartEvent("1197919", getNow))
-    println("json7: " + json7)
-    sendToBus(json7)
 
     Thread.sleep(1000)
 
@@ -133,10 +127,6 @@ class testMessageSender extends Actor {
     val json12: String = write(CycleStopEvent("1197919", getNow))
     println("json12: " + json12)
     sendToBus(json12)
-
-    val json13: String = write(CycleStopEvent("1197919", getNow))
-    println("json13: " + json13)
-    sendToBus(json13)
 
     val json14: String = write(TipDressEvent("testId1", "1197919", RobotDataAddress("rapid", "data", ""),
       TipDressData(4,getNow)))
@@ -178,7 +168,51 @@ class testMessageSender extends Actor {
     val json19: String = write(TipDressEvent("testId1", "1197919", RobotDataAddress("rapid", "data", ""),
       TipDressData(1,getNow)))
     println("json19: " + json19)
-    sendToBus(json19)
+    sendToBus(json19)*/
+
+    // THIS IS USED FOR TESTING THE CYCLE STORING SERVICE ONLY!
+    val isStart = true
+    val json1: String = write(RoutineChangedEvent("testId1", "1197919", "ID1", isStart, "testRout", getNow + 2000.millis))
+    println("json1: " + json1)
+    sendToBus(json1)
+
+    Thread.sleep(1000)
+
+    val json2: String = write(CycleStartEvent("1197919", getNow))
+    println("json2: " + json2)
+    sendToBus(json2)
+
+    Thread.sleep(1000)
+
+    val json3: String = write(RoutineChangedEvent("testId1", "1197919", "ID1", !isStart, "testRout", getNow))
+    println("json3: " + json3)
+    sendToBus(json3)
+
+    val json4: String = write(RoutineChangedEvent("testId2", "1197919", "ID1", isStart, "testRout", getNow))
+    println("json4: " + json4)
+    sendToBus(json4)
+
+    Thread.sleep(1000)
+
+    val json5: String = write(RoutineChangedEvent("testId1", "1197919", "ID2", isStart, "testRout1", getNow))
+    println("json5: " + json5)
+    sendToBus(json5)
+
+    Thread.sleep(2000)
+
+    val json6: String = write(CycleStopEvent("1197919", getNow))
+    println("json6: " + json6)
+    sendToBus(json6)
+
+    Thread.sleep(1000)
+
+    val json7: String = write(RoutineChangedEvent("testId1", "1197919", "ID2", !isStart, "testRout1", getNow - 2000.millis))
+    println("json7: " + json7)
+    sendToBus(json7)
+
+    val json8: String = write(RoutineChangedEvent("testId2", "1197919", "ID1", !isStart, "testRout", getNow - 2000.millis))
+    println("json8: " + json8)
+    sendToBus(json8)
   }
 
   def sendToBus(json: String) = {

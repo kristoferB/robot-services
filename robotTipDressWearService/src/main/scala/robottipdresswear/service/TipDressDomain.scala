@@ -7,13 +7,13 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For tip dress events
-case class TipDressWarningEvent(robotName: String,
-                                workCellName: String,
+case class TipDressWarningEvent(robotId: String,
+                                workCellId: String,
                                 robotDataAddress: RobotDataAddress,
                                 cutterWarning: Boolean)
 
-case class TipDressEvent(robotName: String,
-                         workCellName: String,
+case class TipDressEvent(robotId: String,
+                         workCellId: String,
                          robotDataAddress: RobotDataAddress,
                          tipDressData: TipDressData)
 

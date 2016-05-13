@@ -7,9 +7,9 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For the requestModules answer
-case class ModulesReadEvent(robotName: String,
-                            workCellName: String,
-                            address: RobotDataAddress,
+case class ModulesReadEvent(robotId: String,
+                            workCellId: String,
+                            robotDataAddress: RobotDataAddress,
                             readValue: List[TaskWithModules])
 
 case class TaskWithModules(name: String,
@@ -29,14 +29,14 @@ case class Module(name: String,
                   programCode: List[String])
 
 // For program pointer events
-case class FilledPointerChangedEvent(robotName: String,
-                                     workCellName: String,
+case class FilledPointerChangedEvent(robotId: String,
+                                     workCellId: String,
                                      robotDataAddress: RobotDataAddress,
                                      instruction: String,
                                      programPointerPosition: PointerPosition)
 
-case class PointerChangedEvent(robotName: String,
-                               workCellName: String,
+case class PointerChangedEvent(robotId: String,
+                               workCellId: String,
                                robotDataAddress: RobotDataAddress,
                                programPointerPosition: PointerPosition)
 

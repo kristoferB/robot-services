@@ -65,18 +65,19 @@ class CycleAggregator extends Actor {
       val json = parse(body.toString)
       if (json.has("cycleStart")) {
         val event: CycleStartEvent = json.extract[CycleStartEvent]
-        flagMap += (event.workCellName -> true)
-        workCellStartTimeMap += (event.workCellName -> event.cycleStart)
+        flagMap += (event.workCellId -> true)
+        workCellStartTimeMap += (event.workCellId -> event.cycleStart)
         handleEarlyEvents(event)
       } else if (json.has("cycleStop")) {
         val event: CycleStopEvent = json.extract[CycleStopEvent]
-        flagMap += (event.workCellName -> false)
+        flagMap += (event.workCellId -> false)
         storeCycle(event, mess.properties.messageID)
       } else if (json.has("startFlag") && json.has("routineName")) {
         val event: RoutineChangedEvent = json.extract[RoutineChangedEvent]
+        println("Received routine event: " + event)
         workCellMap = handleWorkCellMap(workCellMap, event)
-        flagMap = handleFlagMap(flagMap, event.workCellName)
-        if (flagMap(event.workCellName)) {
+        flagMap = handleFlagMap(flagMap, event.workCellId)
+        if (flagMap(event.workCellId)) {
           cycleEventsMap = handleEventsMap(cycleEventsMap, event)
         }
         else {
@@ -93,15 +94,15 @@ class CycleAggregator extends Actor {
   def handleWorkCellMap(map: Map[WorkCellName, List[RobotName]], event: RoutineChangedEvent):
   Map[WorkCellName, List[RobotName]] = {
     var result = Map[WorkCellName, List[RobotName]]()
-    if (map.contains(event.workCellName)) {
-      if (map(event.workCellName).contains(event.robotName))
+    if (map.contains(event.workCellId)) {
+      if (map(event.workCellId).contains(event.robotId))
         result = map
       else {
-        val newRobotList = map(event.workCellName) :+ event.robotName
-        result = map + (event.workCellName -> newRobotList)
+        val newRobotList = map(event.workCellId) :+ event.robotId
+        result = map + (event.workCellId -> newRobotList)
       }
     } else {
-      result = map + (event.workCellName -> List[RobotName](event.robotName))
+      result = map + (event.workCellId -> List[RobotName](event.robotId))
     }
     result
   }
@@ -117,22 +118,24 @@ class CycleAggregator extends Actor {
 
   def handleEventsMap(map: Map[RobotName, RoutineChanges], event: RoutineChangedEvent): Map[RobotName, RoutineChanges] = {
     var result = Map[RobotName, RoutineChanges]()
-    if (map.contains(event.robotName)) {
-      val newList: RoutineChanges = map(event.robotName) :+ event
-      result = map + (event.robotName -> newList)
+    if (map.contains(event.robotId)) {
+      val newList: RoutineChanges = map(event.robotId) :+ event
+      result = map + (event.robotId -> newList)
     } else
-      result = map + (event.robotName -> List[RoutineChangedEvent](event))
+      result = map + (event.robotId -> List[RoutineChangedEvent](event))
     result
   }
 
   def handleEarlyEvents(startEvent: CycleStartEvent) = {
     var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
-    if(workCellMap.contains(startEvent.workCellName)) {
-      workCellMap(startEvent.workCellName).foreach{robotName: RobotName =>
+    if(workCellMap.contains(startEvent.workCellId)) {
+      workCellMap(startEvent.workCellId).foreach{ robotName: RobotName =>
         if (earlyEventsMap.contains(robotName)) {
+          println("Early events for robot: " + robotName + "\n" )
           earlyEventsMap(robotName).foreach{event =>
             if (event.eventTime.isAfter(startEvent.cycleStart))
               unHandledEvents = unHandledEvents :+ event
+            println(event)
           }
           earlyEventsMap += (robotName -> List.empty[RoutineChangedEvent])
           if (cycleEventsMap.contains(robotName))
@@ -145,11 +148,14 @@ class CycleAggregator extends Actor {
   }
 
   def storeCycle(stopEvent: CycleStopEvent, elasticId: Option[String]) = {
-    if(workCellStartTimeMap.contains(stopEvent.workCellName) && workCellMap.contains(stopEvent.workCellName)) {
+    if(workCellStartTimeMap.contains(stopEvent.workCellId) && workCellMap.contains(stopEvent.workCellId)) {
+      println("There was a start time and workCellMap contained the stop events")
       var activities: Map[RobotName, List[Routine]] = Map[RobotName, List[Routine]]()
-      val startTime = workCellStartTimeMap(stopEvent.workCellName)
-      workCellMap(stopEvent.workCellName).foreach{robotName: RobotName =>
+      val startTime = workCellStartTimeMap(stopEvent.workCellId)
+      println("start time: " + startTime)
+      workCellMap(stopEvent.workCellId).foreach{ robotName: RobotName =>
         if (cycleEventsMap.contains(robotName)) {
+          println("Handling cycle events for " + robotName)
           var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
           val localCycleEvents: RoutineChanges = cycleEventsMap(robotName)
           cycleEventsMap += (robotName -> List.empty[RoutineChangedEvent])
@@ -159,25 +165,37 @@ class CycleAggregator extends Actor {
           asyncWait onSuccess {
             case _ =>
               if (lateEventsMap.contains(robotName)) {
+                println("Async await completed for " + robotName + "at " + getNow)
+                println("There were late events for robot " + robotName)
                 val localLateEvents: RoutineChanges = lateEventsMap(robotName)
                 lateEventsMap += (robotName -> List.empty[RoutineChangedEvent])
                 localLateEvents.foreach{event =>
                   val eventTime: DateTime = event.eventTime
                   if (eventTime.isAfter(latestEventTime) && eventTime.isBefore(stopEvent.cycleStop))
                     unHandledEvents = unHandledEvents :+ event
+                  println("Event: " + event)
                 }
               }
               val cycle: RoutineChanges = localCycleEvents ::: unHandledEvents
               val packagedCycle: Option[List[Routine]] = packRoutines(cycle)
               if (packagedCycle.isDefined)
                 activities += (robotName ->  packagedCycle.get)
+              else
+                println("packaged cycle was undefined.")
+              println(activities)
           }
         }
       }
-      if (allRobotsInCycle(stopEvent.workCellName, activities)) {
-        val workCellCycle = WorkCellCycle(stopEvent.workCellName, startTime, stopEvent.cycleStop, activities)
-        val json = write(workCellCycle)
-        sendToES(json, elasticId)
+      // waits, asynchronously, for the handling of late events to complete
+      val asyncWait: Future[Unit] = Future { Thread.sleep(6000) }
+      asyncWait onSuccess {
+        case _ =>
+          if (allRobotsInCycle(stopEvent.workCellId, activities)) {
+            println("All robots was in workcellmap")
+            val workCellCycle = WorkCellCycle(stopEvent.workCellId, startTime, stopEvent.cycleStop, activities)
+            val json = write(workCellCycle)
+            sendToES(json, elasticId)
+          }
       }
     }
   }
@@ -187,7 +205,7 @@ class CycleAggregator extends Actor {
       case Some(Nil) =>
         Some(List.empty[Routine])
       case Some(r1 :: r2 :: rs) =>
-        if (r1.startFlag && !r2.startFlag)  {
+        if (r1.isStart && !r2.isStart)  {
           val activity = Routine(r1.routineName, r1.eventTime, r2.eventTime)
           val rest = helperFunction(Some(rs))
           if (rest.isDefined)
@@ -203,10 +221,16 @@ class CycleAggregator extends Actor {
   }
 
   def allRobotsInCycle(workCellName: WorkCellName, activities: Map[RobotName, List[Routine]]): Boolean = {
+    println("allRobotsInCycle called at: " + getNow)
+    println("activities: " + activities)
     val robotsInCycle = activities.keySet
+    println("robots in cycle: " + robotsInCycle)
     val robotsInWorkCell = workCellMap(workCellName).toSet
-    if (robotsInWorkCell.diff(robotsInCycle).isEmpty)
+    println("robots in workcell: " + robotsInWorkCell)
+    if (robotsInWorkCell.diff(robotsInCycle).isEmpty) {
+      println("All robots included")
       true
+    }
     else
       false
   }
@@ -216,6 +240,7 @@ class CycleAggregator extends Actor {
   }
 
   def sendToES(json: String, elasticId: Option[String]) = {
+    println("cycle stored")
     elasticClient.foreach{client => client.index(
       index = "robot-cycle-store", `type` = "cycles", id = elasticId,
       data = json, refresh = true

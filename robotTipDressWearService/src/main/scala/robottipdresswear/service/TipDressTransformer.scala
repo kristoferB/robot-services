@@ -59,10 +59,10 @@ class TipDressTransformer extends Actor {
         warnMap = handleWarnMap(warnMap, event)
         averageSlopeMap = handleSlopeMap(averageSlopeMap, event)
         counterMap = handleCounterMap(counterMap, event)
-        if (!priorEventMap.contains(event.robotName))
-          priorEventMap += (event.robotName -> Some(event))
+        if (!priorEventMap.contains(event.robotId))
+          priorEventMap += (event.robotId -> Some(event))
         else {
-          val priorEvent = priorEventMap(event.robotName)
+          val priorEvent = priorEventMap(event.robotId)
           currentSlope = differentiate(priorEvent.get, event)
           if (currentSlope <= 0)
             assessRiskOfCutterBreakdown(event)
@@ -78,70 +78,70 @@ class TipDressTransformer extends Actor {
 
   def handleWarnMap(map: Map[RobotName, NrOfDeviations], event: TipDressEvent): Map[RobotName, NrOfDeviations] = {
     var result = Map[RobotName, NrOfDeviations]()
-    if (map.contains(event.robotName))
+    if (map.contains(event.robotId))
       result = map
     else
-      result = map + (event.robotName -> 0)
+      result = map + (event.robotId -> 0)
     result
   }
 
   def handleSlopeMap(map: Map[RobotName, Option[Float]], event: TipDressEvent): Map[RobotName, Option[Float]] = {
     var result = Map[RobotName, Option[Float]]()
-    if (map.contains(event.robotName))
+    if (map.contains(event.robotId))
       result = map
     else
-      result = map + (event.robotName -> None)
+      result = map + (event.robotId -> None)
     result
   }
 
   def handleCounterMap(map: Map[RobotName, Int], event: TipDressEvent): Map[RobotName, Int] = {
     var result = Map[RobotName, Int]()
-    if (map.contains(event.robotName))
+    if (map.contains(event.robotId))
       result = map
     else
-      result = map + (event.robotName -> 1)
+      result = map + (event.robotId -> 1)
     result
   }
 
   def reset(event: TipDressEvent) = {
-    priorEventMap += (event.robotName -> Some(event))
-    warnMap += (event.robotName -> 0)
+    priorEventMap += (event.robotId -> Some(event))
+    warnMap += (event.robotId -> 0)
   }
 
   def assessWarningNeed(event: TipDressEvent) = {
-    val nrOfWarnings: Int = warnMap(event.robotName)
+    val nrOfWarnings: Int = warnMap(event.robotId)
     val warn: Boolean = nrOfWarnings == 3
     if (warn) {
       val warningEvent: TipDressWarningEvent =
-        TipDressWarningEvent(event.robotName, event.workCellName, event.robotDataAddress, warn)
+        TipDressWarningEvent(event.robotId, event.workCellId, event.robotDataAddress, warn)
       val json = write(warningEvent)
       sendToBus(json)
     }
   }
 
   def assessRiskOfCutterBreakdown(event: TipDressEvent) = {
-    val averageSlope = averageSlopeMap(event.robotName)
+    val averageSlope = averageSlopeMap(event.robotId)
     if (averageSlope.isDefined) {
       if(currentSlope > averageSlope.get * 0.8)
-        warnMap += (event.robotName -> (warnMap(event.robotName) + 1))
+        warnMap += (event.robotId -> (warnMap(event.robotId) + 1))
       else
-        warnMap += (event.robotName -> 0)
+        warnMap += (event.robotId -> 0)
     }
     else
-      warnMap += (event.robotName -> 0)
+      warnMap += (event.robotId -> 0)
     update(event)
   }
 
   def update(event: TipDressEvent) = {
-    val counter = counterMap(event.robotName)
-    if (averageSlopeMap(event.robotName).isEmpty)
-      averageSlopeMap += (event.robotName -> Some(currentSlope))
+    val counter = counterMap(event.robotId)
+    if (averageSlopeMap(event.robotId).isEmpty)
+      averageSlopeMap += (event.robotId -> Some(currentSlope))
     else {
       averageSlopeMap +=
-        (event.robotName -> Some((averageSlopeMap(event.robotName).get * counter + currentSlope) / (counter + 1)))
+        (event.robotId -> Some((averageSlopeMap(event.robotId).get * counter + currentSlope) / (counter + 1)))
     }
-    priorEventMap += (event.robotName -> Some(event))
-    counterMap += (event.robotName -> (counter + 1))
+    priorEventMap += (event.robotId -> Some(event))
+    counterMap += (event.robotId -> (counter + 1))
   }
 
   def differentiate(event1: TipDressEvent, event2: TipDressEvent): Float = {

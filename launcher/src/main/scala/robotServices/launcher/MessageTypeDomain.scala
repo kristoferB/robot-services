@@ -7,15 +7,22 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(workCellName: String,
+case class CycleStartEvent(workCellId: String,
                            cycleStart: DateTime)
 
-case class CycleStopEvent(workCellName: String,
+case class CycleStopEvent(workCellId: String,
                           cycleStop: DateTime)
 
+case class RoutineChangedEvent(robotId: String,
+                               workCellId: String,
+                               activityId: String,
+                               isStart: Boolean,
+                               routineName: String,
+                               eventTime: DateTime)
+
 // For the requestModules answer
-case class ModulesReadEvent(robotName: String,
-                            workCellName: String,
+case class ModulesReadEvent(robotId: String,
+                            workCellId: String,
                             address: RobotDataAddress,
                             readValue: List[TaskWithModules])
 
@@ -36,8 +43,8 @@ case class Module(name: String,
                   programCode: List[String])
 
 // For program pointer events
-case class PointerChangedEvent(robotName: String,
-                               workCellName: String,
+case class PointerChangedEvent(robotId: String,
+                               workCellId: String,
                                robotDataAddress: RobotDataAddress,
                                programPointerPosition: PointerPosition)
 
@@ -66,8 +73,8 @@ case class Location(column: Int,
                     row: Int)
 
 // For tip dress data
-case class TipDressEvent(robotName: String,
-                         workCellName: String,
+case class TipDressEvent(robotId: String,
+                         workCellId: String,
                          robotDataAddress: RobotDataAddress,
                          tipDressData: TipDressData)
 
