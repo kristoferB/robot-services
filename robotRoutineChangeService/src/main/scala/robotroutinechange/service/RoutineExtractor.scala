@@ -113,9 +113,8 @@ class RoutineExtractor extends Actor {
 
   def isWaitingRoutine(routineName: String): Boolean = {
     var flag = false
-    if (listOfWaitRoutines.contains(routineName)) {
+    if (listOfWaitRoutines.contains(routineName))
       flag = true
-    }
     flag
   }
 
