@@ -13,7 +13,7 @@ object launcher extends App {
   implicit val executor = system.dispatcher
   implicit val materializer = ActorMaterializer()
   val logger = Logging(system, "SimpleService")
-
+/*
   val fillWithInstructionActor = system.actorOf(robotpath.service.PointerTransformer.props)
   fillWithInstructionActor ! "connect"
 
@@ -22,7 +22,7 @@ object launcher extends App {
 
   import robotroutinechange.service._
   val routineChangeActor = system.actorOf(RoutineExtractor.props)
-  routineChangeActor ! "connect"
+  routineChangeActor ! "connect"*/
 
   import robotcyclestore.service._
   val cycleAggregatorActor = system.actorOf(CycleAggregator.props)

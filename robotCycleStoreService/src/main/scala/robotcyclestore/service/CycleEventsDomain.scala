@@ -22,9 +22,10 @@ case class RoutineChangedEvent(robotId: String,
                                eventTime: DateTime)
 
 case class WorkCellCycle(workCellId: String,
+                         entryId: String,
                          from: DateTime,
                          to: DateTime,
-                         activities: Map[String, List[Routine]])
+                         activities: Map[String, Map[String, List[Routine]]])
 
 case class Routine(name: String,
                    from: DateTime,
