@@ -11,6 +11,7 @@ import org.json4s.native.Serialization.write
 import com.github.nscala_time.time.Imports._
 import wabisabi._
 import scala.concurrent._
+import scala.util.{Success, Failure}
 import ExecutionContext.Implicits.global
 
 /**
@@ -200,6 +201,7 @@ class CycleAggregator extends Actor {
             val workCellCycle = WorkCellCycle(stopEvent.workCellId, uuid, startTime, stopEvent.cycleStop, activities)
             val json = write(workCellCycle)
             sendToES(json, elasticId)
+            getFromES("")
           }
       }
     }
@@ -252,10 +254,24 @@ class CycleAggregator extends Actor {
     )}
   }
 
-  def getFromES(json: String): String = {
-    println("Not implemented yet...")
-    val json = write("Not implemented yet...")
-    json
+  def getFromES(json: String): Unit = {
+    val jsonQuery: String = "{ \"size\" : 20, \"query\": { \"bool\" :" +
+      "{ \"must\" : [ { \"term\" : { \"workCellId\" : \"1197919\" } }," +
+      "{ \"range\" : { \"from\" : { \"from\" : \"2016-05-13T07:00:00\", \"to\" : \"2016-05-25T11:00:00\" } } } ] } } }"
+    elasticClient.foreach{client =>
+      val searchResponse: Future[String] = client.search(index = "robot-cycle-store", query = jsonQuery).map(_.getResponseBody)
+      searchResponse onComplete {
+        case Failure(e) => println("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
+        case Success(cycles) => {
+          val json = parse(cycles)
+          val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
+          val robotCyclesResponse = RobotCyclesResponse("1197919",extractedCycles)
+          val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesRespone" -> robotCyclesResponse))
+          println(jsonResponse)
+          sendToBus(jsonResponse)
+        }
+      }
+    }
   }
 
   override def postStop() = {

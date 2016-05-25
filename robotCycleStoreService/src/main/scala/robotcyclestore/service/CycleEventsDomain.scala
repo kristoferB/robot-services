@@ -31,6 +31,12 @@ case class Routine(name: String,
                    from: DateTime,
                    to: DateTime)
 
+// For drawing service events
+case class RobotCycleSearchQuery()
+
+case class RobotCyclesResponse(workCellId: String,
+                               foundCycles: List[WorkCellCycle])
+
 // For program pointer events
 case class PointerChangedEvent(robotId: String,
                                robotDataAddress: RobotDataAddress,

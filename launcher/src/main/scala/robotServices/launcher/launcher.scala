@@ -28,9 +28,9 @@ object launcher extends App {
   val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
   cycleAggregatorActor ! "connect"
 
-  import robottipdresswear.service._
+  /*import robottipdresswear.service._
   val cutterWarnActor = system.actorOf(TipDressTransformer.props)
-  cutterWarnActor ! "connect"
+  cutterWarnActor ! "connect"*/
 
   // Remove comment to test the system using the provided tester actor
   val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
