@@ -42,6 +42,14 @@ case class Module(name: String,
                   isViewOnly: Boolean,
                   programCode: List[String])
 
+// For drawing service events
+case class RobotCycleSearchQuery(cycleId: Option[String],
+                                 timeSpan: Option[TimeSpan],
+                                 workCellId: String)
+
+case class TimeSpan(start: DateTime,
+                    stop: DateTime)
+
 // For program pointer events
 case class PointerChangedEvent(robotId: String,
                                workCellId: String,

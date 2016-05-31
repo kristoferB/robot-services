@@ -32,7 +32,12 @@ case class Routine(name: String,
                    to: DateTime)
 
 // For drawing service events
-case class RobotCycleSearchQuery()
+case class RobotCycleSearchQuery(cycleId: Option[String],
+                                 timeSpan: Option[TimeSpan],
+                                 workCellId: String)
+
+case class TimeSpan(start: DateTime,
+                    stop: DateTime)
 
 case class RobotCyclesResponse(workCellId: String,
                                foundCycles: List[WorkCellCycle])

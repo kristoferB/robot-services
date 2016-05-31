@@ -213,6 +213,12 @@ class testMessageSender extends Actor {
     val json8: String = write(RoutineChangedEvent("testId2", "1197919", "ID1", !isStart, "testRout", getNow - 2000.millis))
     println("json8: " + json8)
     sendToBus(json8)
+
+    Thread.sleep(10000)
+
+    val json9: String = write(Map[String,RobotCycleSearchQuery]("robotCycleSearchQuery" -> RobotCycleSearchQuery(None, Some(TimeSpan(getNow - 18.days, getNow)), "1197919")))
+    println("json9: " + json9)
+    sendToBus(json9)
   }
 
   def sendToBus(json: String) = {

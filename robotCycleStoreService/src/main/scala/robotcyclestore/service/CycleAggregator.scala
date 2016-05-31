@@ -85,7 +85,8 @@ class CycleAggregator extends Actor {
           lateEventsMap = handleEventsMap(lateEventsMap, event)
         }
       } else if (json.has("robotCycleSearchQuery")) {
-        println("Not implemented yet...")
+        val event: RobotCycleSearchQuery = (json \ "robotCycleSearchQuery").extract[RobotCycleSearchQuery]
+        retrieveFromES(event)
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
       }
@@ -131,11 +132,9 @@ class CycleAggregator extends Actor {
     if(workCellMap.contains(startEvent.workCellId)) {
       workCellMap(startEvent.workCellId).foreach{ robotName: RobotName =>
         if (earlyEventsMap.contains(robotName)) {
-          println("Early events for robot: " + robotName + "\n" )
           earlyEventsMap(robotName).foreach{event =>
             if (event.eventTime.isAfter(startEvent.cycleStart))
               unHandledEvents = unHandledEvents :+ event
-            println(event)
           }
           earlyEventsMap += (robotName -> List.empty[RoutineChangedEvent])
           if (cycleEventsMap.contains(robotName))
@@ -149,17 +148,13 @@ class CycleAggregator extends Actor {
 
   def storeCycle(stopEvent: CycleStopEvent, elasticId: Option[String]) = {
     if(workCellStartTimeMap.contains(stopEvent.workCellId) && workCellMap.contains(stopEvent.workCellId)) {
-      println("There was a start time and workCellMap contained the stop events")
       var counter: Int = 0
       var activities: Map[RobotName, Map[String, List[Routine]]] = Map[RobotName, Map[String, List[Routine]]]()
       val startTime = workCellStartTimeMap(stopEvent.workCellId)
-      println("start time: " + startTime)
       workCellMap(stopEvent.workCellId).foreach{ robotName: RobotName =>
         if (cycleEventsMap.contains(robotName)) {
           val localCounter = counter
           counter += 1
-          println("Handling cycle events for " + robotName)
-          println("Counter: " + counter)
           var unHandledEvents: RoutineChanges = List[RoutineChangedEvent]()
           val localCycleEvents: RoutineChanges = cycleEventsMap(robotName)
           cycleEventsMap += (robotName -> List.empty[RoutineChangedEvent])
@@ -169,15 +164,12 @@ class CycleAggregator extends Actor {
           asyncWait onSuccess {
             case _ =>
               if (lateEventsMap.contains(robotName)) {
-                println("Async await completed for " + robotName + "at " + getNow)
-                println("There were late events for robot " + robotName)
                 val localLateEvents: RoutineChanges = lateEventsMap(robotName)
                 lateEventsMap += (robotName -> List.empty[RoutineChangedEvent])
                 localLateEvents.foreach{event =>
                   val eventTime: DateTime = event.eventTime
                   if (eventTime.isAfter(latestEventTime) && eventTime.isBefore(stopEvent.cycleStop))
                     unHandledEvents = unHandledEvents :+ event
-                  println("Event: " + event)
                 }
               }
               val cycle: RoutineChanges = localCycleEvents ::: unHandledEvents
@@ -186,9 +178,6 @@ class CycleAggregator extends Actor {
                 val newActivity = Map[String, List[Routine]]("routines" -> packagedCycle.get)
                 activities += (robotName -> newActivity)
               }
-              else
-                println("packaged cycle was undefined.")
-              println(activities)
           }
         }
       }
@@ -197,11 +186,9 @@ class CycleAggregator extends Actor {
       asyncWait onSuccess {
         case _ =>
           if (allRobotsInCycle(stopEvent.workCellId, activities)) {
-            println("All robots was in workcellmap")
             val workCellCycle = WorkCellCycle(stopEvent.workCellId, uuid, startTime, stopEvent.cycleStop, activities)
             val json = write(workCellCycle)
             sendToES(json, elasticId)
-            getFromES("")
           }
       }
     }
@@ -228,16 +215,10 @@ class CycleAggregator extends Actor {
   }
 
   def allRobotsInCycle(workCellName: WorkCellName, activities: Map[RobotName, Map[String, List[Routine]]]): Boolean = {
-    println("allRobotsInCycle called at: " + getNow)
-    println("activities: " + activities)
     val robotsInCycle = activities.keySet
-    println("robots in cycle: " + robotsInCycle)
     val robotsInWorkCell = workCellMap(workCellName).toSet
-    println("robots in workcell: " + robotsInWorkCell)
-    if (robotsInWorkCell.diff(robotsInCycle).isEmpty) {
-      println("All robots included")
+    if (robotsInWorkCell.diff(robotsInCycle).isEmpty)
       true
-    }
     else
       false
   }
@@ -247,30 +228,53 @@ class CycleAggregator extends Actor {
   }
 
   def sendToES(json: String, elasticId: Option[String]) = {
-    println("cycle stored")
     elasticClient.foreach{client => client.index(
       index = "robot-cycle-store", `type` = "cycles", id = elasticId,
       data = json, refresh = true
     )}
   }
 
-  def getFromES(json: String): Unit = {
-    val jsonQuery: String = "{ \"size\" : 20, \"query\": { \"bool\" :" +
-      "{ \"must\" : [ { \"term\" : { \"workCellId\" : \"1197919\" } }," +
-      "{ \"range\" : { \"from\" : { \"from\" : \"2016-05-13T07:00:00\", \"to\" : \"2016-05-25T11:00:00\" } } } ] } } }"
-    elasticClient.foreach{client =>
-      val searchResponse: Future[String] = client.search(index = "robot-cycle-store", query = jsonQuery).map(_.getResponseBody)
-      searchResponse onComplete {
-        case Failure(e) => println("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
-        case Success(cycles) => {
-          val json = parse(cycles)
-          val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
-          val robotCyclesResponse = RobotCyclesResponse("1197919",extractedCycles)
-          val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesRespone" -> robotCyclesResponse))
-          println(jsonResponse)
-          sendToBus(jsonResponse)
+  def retrieveFromES(event: RobotCycleSearchQuery) = {
+    var jsonQuery: Option[String] = None
+    if (event.cycleId.isDefined) {
+      jsonQuery = Some("{ \"size\" : 20, \"query\": { \"match\" : { \"entryId\" : \"" +
+        s"${event.cycleId.get}" +
+        "\" } } }")
+    } else if (event.timeSpan.isDefined) {
+      jsonQuery = Some("{ \"size\" : 20, \"query\": { \"bool\" :{ \"must\" : [ { \"term\" : { \"workCellId\" : \"" +
+        s"${event.workCellId}" +
+        "\" } },{ \"range\" : { \"from\" : { \"gte\" : \"" +
+        s"${event.timeSpan.get.start}" +
+        "\" } } }, { \"range\" : { \"to\" : { \"lte\" : \"" +
+        s"${event.timeSpan.get.stop}" +
+        "\" } } } ] } } }")
+    }
+    if (jsonQuery.isDefined) {
+      elasticClient.foreach{client =>
+        val searchResponse: Future[String] =
+          client.search(index = "robot-cycle-store", query = jsonQuery.get).map(_.getResponseBody)
+        searchResponse onComplete {
+          case Failure(e) => println("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
+          case Success(cycles) =>
+            val json = parse(cycles)
+            val hits: Int = (json \ "hits" \ "total").extract[Int]
+            if (hits == 1) {
+              val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[WorkCellCycle]
+              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", List[WorkCellCycle](extractedCycles))
+              val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> robotCyclesResponse))
+              sendToBus(jsonResponse)
+            } else {
+              val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
+              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", extractedCycles)
+              val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> robotCyclesResponse))
+              sendToBus(jsonResponse)
+            }
         }
       }
+    } else {
+      val emptyResponse = RobotCyclesResponse(s"${event.workCellId}", List.empty[WorkCellCycle])
+      val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> emptyResponse))
+      sendToBus(jsonResponse)
     }
   }
 
