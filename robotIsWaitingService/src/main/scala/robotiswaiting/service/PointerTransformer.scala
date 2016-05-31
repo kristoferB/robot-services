@@ -1,5 +1,6 @@
 package robotiswaiting.service
 
+import java.text.SimpleDateFormat
 import akka.actor._
 import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
@@ -34,7 +35,10 @@ indicating whether the robot issues a wait* RAPID instruction of not.
 */
 
 class PointerTransformer extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
+  val customDateFormat = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  }
+  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
   type Instruction = String
@@ -78,8 +82,9 @@ class PointerTransformer extends Actor {
       isWaiting = true
     }
     val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotId, event.workCellId,
-      event.robotDataAddress, instruction, isWaiting, event.programPointerPosition)
+      event.address, instruction, isWaiting, event.programPointerPosition)
     val json: String = write(filledEvent)
+    println("From isWaiting: " + json)
     sendToBus(json)
   }
 

@@ -1,5 +1,6 @@
 package robottipdresswear.service
 
+import java.text.SimpleDateFormat
 import akka.actor._
 import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
@@ -15,7 +16,10 @@ import com.github.nscala_time.time.Imports._
   */
 
 class TipDressTransformer extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
+  val customDateFormat = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  }
+  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
   type RobotName = String

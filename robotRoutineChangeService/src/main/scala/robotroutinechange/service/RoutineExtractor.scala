@@ -1,5 +1,6 @@
 package robotroutinechange.service
 
+import java.text.SimpleDateFormat
 import akka.actor._
 import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
@@ -10,13 +11,15 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 import com.github.nscala_time.time.Imports._
 
-
 /**
   * Created by Henrik on 2016-05-10.
   */
 
 class RoutineExtractor extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
+  val customDateFormat = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  }
+  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
   type RobotName = String
@@ -88,6 +91,7 @@ class RoutineExtractor extends Actor {
             RoutineChangedEvent(event.robotId, event.workCellId, priorId, !isStart, priorRoutine,
               event.programPointerPosition.eventTime)
           json = write(routineStopEvent)
+          println("PriorRoutine: " + json)
           sendToBus(json)
         }
         if (!isWaitingRoutine(currentRoutine)) {
@@ -95,6 +99,7 @@ class RoutineExtractor extends Actor {
             RoutineChangedEvent(event.robotId, event.workCellId, currentId, isStart, currentRoutine,
               event.programPointerPosition.eventTime)
           json = write(routineStartEvent)
+          println("CurrentRoutine: " + json)
           sendToBus(json)
         }
       }

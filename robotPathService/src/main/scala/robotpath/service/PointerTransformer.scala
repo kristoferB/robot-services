@@ -1,5 +1,7 @@
 package robotpath.service
 
+import java.text.SimpleDateFormat
+
 import akka.actor._
 import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
@@ -15,7 +17,10 @@ import com.github.nscala_time.time.Imports._
   */
 
 class PointerTransformer extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
+  val customDateFormat = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  }
+  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
   // Type aliases
   type RobotName = String
@@ -53,7 +58,9 @@ class PointerTransformer extends Actor {
     case mess @ AMQMessage(body, prop, headers) =>
       import Helpers.JValueExtended
       val json = parse(body.toString)
-      if (json.has("readValue")) {
+      println(json)
+      if (json.has("readResult")) {
+        println("Recievied result...")
         val event: ModulesReadEvent = json.extract[ModulesReadEvent]
         event.readValue.foreach(task => {
           task.modules.foreach(module => moduleMap += (module.name -> module))
@@ -62,7 +69,9 @@ class PointerTransformer extends Actor {
         })
         robotMap += (event.robotId -> taskMap)
         taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
+        println(robotMap)
       } else if (json.has("programPointerPosition") && !json.has("instruction")) {
+        println(getNow)
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
         fill(event)
       } else {
@@ -73,22 +82,23 @@ class PointerTransformer extends Actor {
   def fill(event: PointerChangedEvent) = {
     val eventPPPos = event.programPointerPosition
     if (robotMap.contains(event.robotId)) {
-      if (robotMap(event.robotId).contains(eventPPPos.task.name)) {
-        if (robotMap(event.robotId)(eventPPPos.task.name).contains(eventPPPos.position.moduleName)) {
-          val module: Module = robotMap(event.robotId)(eventPPPos.task.name)(eventPPPos.position.moduleName)
+      if (robotMap(event.robotId).contains(eventPPPos.task)) {
+        if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.module)) {
+          val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.module)
           val range: Range = eventPPPos.position.range
           val instruction: Instruction = module.programCode(range.begin.row).
             slice(range.begin.column, range.end.column + 1)
           val filledEvent: FilledPointerChangedEvent =
-            FilledPointerChangedEvent(event.robotId, event.workCellId, event.robotDataAddress, instruction, eventPPPos)
+            FilledPointerChangedEvent(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
           val json = write(filledEvent)
+          println("From instruction filler: " + json)
           sendToBus(json)
         } else
           println(s"The system ${event.robotId} does not contain the module called" +
-            s"${eventPPPos.position.moduleName}")
+            s"${eventPPPos.position.module}")
       } else
         println(s"The system ${event.robotId} does not contain the task called" +
-          s"${eventPPPos.task.name}")
+          s"${eventPPPos.task}")
     } else
       requestModules(event)
   }
@@ -97,7 +107,7 @@ class PointerTransformer extends Actor {
     import org.json4s.JsonDSL._
     val jAddress = ("domain" -> "rapid") ~ ("kind" -> "tasks")
     val json = ("command" -> "read") ~ ("robotId" -> event.robotId) ~ ("address" -> jAddress)
-    println(s"Requesting modules for robot id ${event.robotId}.")
+    println(s"Requesting modules for robot id ${event.robotId}." + json)
     sendToBus(write(json))
   }
 
@@ -110,7 +120,7 @@ class PointerTransformer extends Actor {
   }
 
   def getNow = {
-    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
+    DateTime.now//DateTimeZone.forID("Europe/Stockholm")
   }
 }
 
