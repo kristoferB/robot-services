@@ -17,14 +17,14 @@ case class RoutineChangedEvent(robotId: String,
 // For program pointer events
 case class PointerChangedEvent(robotId: String,
                                workCellId: String,
-                               robotDataAddress: RobotDataAddress,
+                               address: Address,
                                instruction: String,
                                isWaiting: Boolean,
                                programPointerPosition: PointerPosition)
 
-case class RobotDataAddress(domain: String,
-                            kind: String,
-                            path: String)
+case class Address(domain: String,
+                   Kind: Int,
+                   Path: List[String])
 
 case class PointerPosition(task: Task,
                            position: Position,

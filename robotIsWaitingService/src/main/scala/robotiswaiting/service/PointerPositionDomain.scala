@@ -9,20 +9,20 @@ import com.github.nscala_time.time.Imports._
 // For program pointer events
 case class FilledPointerChangedEvent(robotId: String,
                                      workCellId: String,
-                                     robotDataAddress: RobotDataAddress,
+                                     address: Address,
                                      instruction: String,
                                      isWaiting: Boolean,
                                      programPointerPosition: PointerPosition)
 
 case class PointerChangedEvent(robotId: String,
                                workCellId: String,
-                               robotDataAddress: RobotDataAddress,
+                               address: Address,
                                instruction: String,
                                programPointerPosition: PointerPosition)
 
-case class RobotDataAddress(domain: String,
-                            kind: String,
-                            path: String)
+case class Address(domain: String,
+                   Kind: Int,
+                   Path: List[String])
 
 case class PointerPosition(task: Task,
                            position: Position,

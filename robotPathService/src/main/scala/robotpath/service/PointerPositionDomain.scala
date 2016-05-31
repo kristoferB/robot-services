@@ -9,7 +9,7 @@ import com.github.nscala_time.time.Imports._
 // For the requestModules answer
 case class ModulesReadEvent(robotId: String,
                             workCellId: String,
-                            robotDataAddress: RobotDataAddress,
+                            address: Address,
                             readValue: List[TaskWithModules])
 
 case class TaskWithModules(name: String,
@@ -31,22 +31,22 @@ case class Module(name: String,
 // For program pointer events
 case class FilledPointerChangedEvent(robotId: String,
                                      workCellId: String,
-                                     robotDataAddress: RobotDataAddress,
+                                     address: Address,
                                      instruction: String,
                                      programPointerPosition: PointerPosition)
 
 case class PointerChangedEvent(robotId: String,
                                workCellId: String,
-                               robotDataAddress: RobotDataAddress,
+                               address: Address,
                                programPointerPosition: PointerPosition)
 
-case class RobotDataAddress(domain: String,
-                            kind: String,
-                            path: String)
+case class Address(domain: String,
+                   Kind: Int,
+                   Path: List[String])
 
-case class PointerPosition(task: Task,
+case class PointerPosition(task: String,
                            position: Position,
-                           eventTime: DateTime)
+                           time: DateTime)
 
 case class Task(name: String,
                 `type`: Int,
@@ -54,8 +54,8 @@ case class Task(name: String,
                 executionType: Int,
                 executionStatus: Int)
 
-case class Position(moduleName: String,
-                    routineName: String,
+case class Position(module: String,
+                    routine: String,
                     range: Range)
 
 case class Range(begin: Location,
