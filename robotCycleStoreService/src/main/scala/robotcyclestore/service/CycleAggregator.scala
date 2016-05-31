@@ -42,7 +42,7 @@ class CycleAggregator extends Actor {
   // Elasticsearch
   var elasticClient: Option[Client] = None
 
-  // Local variables
+  // Maps
   var cycleEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
   var earlyEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()
   var lateEventsMap: Map[RobotName, RoutineChanges] = Map[RobotName, RoutineChanges]()

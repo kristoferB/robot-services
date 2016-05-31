@@ -48,7 +48,6 @@ class PointerTransformer extends Actor {
       println("Connected: " + request)
       c ! ConsumeFromTopic(readFrom)
       theBus = Some(c)
-      requestModules()
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
@@ -91,13 +90,15 @@ class PointerTransformer extends Actor {
         println(s"The system ${event.robotId} does not contain the task called" +
           s"${eventPPPos.task.name}")
     } else
-      println(s"The system ${event.robotId} does not exist in the robot map.")
+      requestModules(event)
   }
 
-  def requestModules() = {
-    val json = write(Map[String, String]("Command" -> "ReadTasks", "Channel" -> "emulatedRobot",
-      "DataPointId" -> "vcta.tasks", "path" -> "rapid.tasks"))
-    sendToBus(json)
+  def requestModules(event: PointerChangedEvent) = {
+    import org.json4s.JsonDSL._
+    val jAddress = ("domain" -> "rapid") ~ ("kind" -> "tasks")
+    val json = ("command" -> "read") ~ ("robotId" -> event.robotId) ~ ("address" -> jAddress)
+    println(s"Requesting modules for robot id ${event.robotId}.")
+    sendToBus(write(json))
   }
 
   def sendToBus(json: String) = {

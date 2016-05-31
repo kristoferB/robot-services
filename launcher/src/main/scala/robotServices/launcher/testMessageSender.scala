@@ -188,7 +188,7 @@ class testMessageSender extends Actor {
     println("json3: " + json3)
     sendToBus(json3)
 
-    val json4: String = write(RoutineChangedEvent("testId2", "1197919", "ID1", isStart, "testRout", getNow))
+    val json4: String = write(RoutineChangedEvent("testId2", "1197919", "ID3", isStart, "testRout", getNow))
     println("json4: " + json4)
     sendToBus(json4)
 
@@ -210,15 +210,15 @@ class testMessageSender extends Actor {
     println("json7: " + json7)
     sendToBus(json7)
 
-    val json8: String = write(RoutineChangedEvent("testId2", "1197919", "ID1", !isStart, "testRout", getNow - 2000.millis))
+    val json8: String = write(RoutineChangedEvent("testId2", "1197919", "ID3", !isStart, "testRout", getNow - 2000.millis))
     println("json8: " + json8)
     sendToBus(json8)
 
-    Thread.sleep(10000)
+    /*Thread.sleep(10000)
 
     val json9: String = write(Map[String,RobotCycleSearchQuery]("robotCycleSearchQuery" -> RobotCycleSearchQuery(None, Some(TimeSpan(getNow - 18.days, getNow)), "1197919")))
     println("json9: " + json9)
-    sendToBus(json9)
+    sendToBus(json9)*/
   }
 
   def sendToBus(json: String) = {
