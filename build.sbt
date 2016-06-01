@@ -40,15 +40,27 @@ lazy val root = project.in( file(".") ).
   aggregate(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
     robotTipDressWearService, launcher)
 
-lazy val robotPathService = project.settings(commonSettings: _*)
+lazy val core = project.settings(commonSettings: _*)
 
-lazy val robotIsWaitingService = project.settings(commonSettings: _*)
+lazy val robotPathService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
 
-lazy val robotRoutineChangeService = project.settings(commonSettings: _*)
+lazy val robotIsWaitingService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
 
-lazy val robotCycleStoreService = project.settings(commonSettings: _*)
+lazy val robotRoutineChangeService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
 
-lazy val robotTipDressWearService = project.settings(commonSettings: _*)
+lazy val robotCycleStoreService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
+
+lazy val robotTipDressWearService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
 
 lazy val launcher = project.
   dependsOn(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,

@@ -1,45 +1,33 @@
-package robotcyclestore.service
+package cycleStore
 
 import akka.actor._
-import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
+import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.model._
-import com.typesafe.config.ConfigFactory
+import com.github.nscala_time.time.Imports._
+import core.ServiceBase
+import core.Domain._
+import core.Helpers._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
-import com.github.nscala_time.time.Imports._
 import wabisabi._
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-import scala.util.{Success, Failure}
-import ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 
 /**
   * Created by Henrik on 2016-04-15.
   */
 
-class CycleAggregator extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
-
+class CycleAggregator extends ServiceBase {
   // Type aliases
   type RobotId = String
   type WorkCellId = String
   type ActivityType = String
   type ActivityEvents = List[ActivityEvent]
   type Activities = List[Activity]
-
-  // Read from config file
-  val config = ConfigFactory.load()
-  val address = config.getString("activemq.address")
-  val user = config.getString("activemq.user")
-  val pass = config.getString("activemq.pass")
-  val readFrom = config.getString("service.robotCycleStore.readFromTopic")
-  val writeTo = config.getString("service.robotCycleStore.writeToTopic")
-  val elasticIP = config.getString("elastic.ip")
-  val elasticPort = config.getString("elastic.port")
-
-  // The state
-  var theBus: Option[ActorRef] = None
 
   // Elasticsearch
   var elasticClient: Option[Client] = None
@@ -58,12 +46,11 @@ class CycleAggregator extends Actor {
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom)
+      c ! ConsumeFromTopic(topic)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
-      import Helpers.JValueExtended
       val json = parse(body.toString)
       if (json.has("isStart") && json.has("cycleId")) {
         val event: CycleEvent = json.extract[CycleEvent]
@@ -208,10 +195,6 @@ class CycleAggregator extends Actor {
       false
   }
 
-  def sendToBus(json: String) = {
-    theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
-  }
-
   def sendToES(json: String, elasticId: Option[String]) = {
     elasticClient.foreach{client => client.index(
       index = "robot-cycle-store", `type` = "cycles", id = elasticId,
@@ -261,15 +244,6 @@ class CycleAggregator extends Actor {
       val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> emptyResponse))
       sendToBus(jsonResponse)
     }
-  }
-
-  override def postStop() = {
-    theBus.foreach(_ ! CloseConnection)
-    Client.shutdown()
-  }
-
-  def getNow = {
-    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString

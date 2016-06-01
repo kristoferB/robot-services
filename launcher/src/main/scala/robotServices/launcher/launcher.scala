@@ -1,8 +1,13 @@
 package robotServices.launcher
 
+import addInstruction.InstructionFiller
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.stream.ActorMaterializer
+import cycleStore.CycleAggregator
+import isWaitInstruction.IsWaitFiller
+import routineChange.RoutineExtractor
+import tipDressWear.TipDressTransformer
 
 /**
   * Created by Henrik on 2016-05-02.
@@ -14,27 +19,24 @@ object launcher extends App {
   implicit val materializer = ActorMaterializer()
   val logger = Logging(system, "SimpleService")
 
-  val fillWithInstructionActor = system.actorOf(robotpath.service.PointerTransformer.props)
+  val fillWithInstructionActor = system.actorOf(InstructionFiller.props)
   fillWithInstructionActor ! "connect"
 
-  val waitTestActor = system.actorOf(robotiswaiting.service.PointerTransformer.props)
+  val waitTestActor = system.actorOf(IsWaitFiller.props)
   waitTestActor ! "connect"
 
-  import robotroutinechange.service._
   val routineChangeActor = system.actorOf(RoutineExtractor.props)
   routineChangeActor ! "connect"
 
-  /*import robotcyclestore.service._
   val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
-  cycleAggregatorActor ! "connect"*/
+  cycleAggregatorActor ! "connect"
 
-  /*import robottipdresswear.service._
-  val cutterWarnActor = system.actorOf(TipDressTransformer.props)
+  /*val cutterWarnActor = system.actorOf(TipDressTransformer.props)
   cutterWarnActor ! "connect"*/
 
-  /*// Remove comment to test the system using the provided tester actor
+  // Remove comment to test the system using the provided tester actor
   val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
-  testerActor ! "connect"*/
+  testerActor ! "connect"
 
   scala.io.StdIn.readLine("Press ENTER to exit application.\n") match {
     case x => system.terminate()

@@ -6,33 +6,22 @@ import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.model._
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
+import core.Domain.{ActivityEvent, CycleEvent}
+import core.ServiceBase
 import org.json4s.native.Serialization.write
 
 /**
   * Created by Henrik on 2016-05-03.
   */
 
-class testMessageSender extends Actor {
-  implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
-
-  // Read from config file
-  val config = ConfigFactory.load()
-  val address = config.getString("activemq.address")
-  val user = config.getString("activemq.user")
-  val pass = config.getString("activemq.pass")
-  val readFrom = config.getString("service.tester.readFromTopic")
-  val writeTo = config.getString("service.tester.writeToTopic")
-
-  // The state
-  var theBus: Option[ActorRef] = None
-
+class testMessageSender extends ServiceBase {
   // Functions
   def receive = {
     case "connect" =>
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("connected: " + request)
-      c ! ConsumeFromTopic(readFrom)
+      c ! ConsumeFromTopic(topic)
       theBus = Some(c)
       sendMessages()
     case ConnectionFailed(request, reason) =>
@@ -171,45 +160,45 @@ class testMessageSender extends Actor {
     sendToBus(json19)*/
 
     // THIS IS USED FOR TESTING THE CYCLE STORING SERVICE ONLY!
-    val json1: String = write(ActivityEvent("routine1", true, "moveToBody", "R1", getNow + 2.seconds, "routines", "1197919"))
+    val json1: String = write(ActivityEvent("routine1", isStart = true, "moveToBody", "R1", DateTime.now + 2.seconds, "routines", "1197919"))
     println("json1: " + json1)
     sendToBus(json1)
 
     Thread.sleep(1000)
 
-    val json2: String = write(CycleEvent("cycle1", true, getNow, "1197919"))
+    val json2: String = write(CycleEvent("cycle1", isStart = true, DateTime.now, "1197919"))
     println("json2: " + json2)
     sendToBus(json2)
 
     Thread.sleep(1000)
 
-    val json3: String = write(ActivityEvent("routine1", false, "moveToBody", "R1", getNow + 2.seconds, "routines", "1197919"))
+    val json3: String = write(ActivityEvent("routine1", isStart = false, "moveToBody", "R1", DateTime.now + 2.seconds, "routines", "1197919"))
     println("json3: " + json3)
     sendToBus(json3)
 
-    val json4: String = write(ActivityEvent("routine2", true, "pickUpDoor", "R3", getNow + 2.seconds, "routines", "1197919"))
+    val json4: String = write(ActivityEvent("routine2", isStart = true, "pickUpDoor", "R3", DateTime.now + 2.seconds, "routines", "1197919"))
     println("json4: " + json4)
     sendToBus(json4)
 
     Thread.sleep(1000)
 
-    val json5: String = write(ActivityEvent("routine3", true, "goHome", "R2", getNow, "routines", "1197919"))
+    val json5: String = write(ActivityEvent("routine3", isStart = true, "goHome", "R2", DateTime.now, "routines", "1197919"))
     println("json5: " + json5)
     sendToBus(json5)
 
     Thread.sleep(2000)
 
-    val json6: String = write(CycleEvent("cycle1", false, getNow, "1197919"))
+    val json6: String = write(CycleEvent("cycle1", isStart = false, DateTime.now, "1197919"))
     println("json6: " + json6)
     sendToBus(json6)
 
     Thread.sleep(1000)
 
-    val json7: String = write(ActivityEvent("routine3", false, "pickUpDoor", "R2", getNow - 2.seconds, "routines", "1197919"))
+    val json7: String = write(ActivityEvent("routine3", isStart = false, "pickUpDoor", "R2", DateTime.now - 2.seconds, "routines", "1197919"))
     println("json7: " + json7)
     sendToBus(json7)
 
-    val json8: String = write(ActivityEvent("routine2", false, "pickUpDoor", "R3", getNow - 2.seconds, "routines", "1197919"))
+    val json8: String = write(ActivityEvent("routine2", isStart = false, "pickUpDoor", "R3", DateTime.now - 2.seconds, "routines", "1197919"))
     println("json8: " + json8)
     sendToBus(json8)
 
@@ -220,17 +209,6 @@ class testMessageSender extends Actor {
     sendToBus(json9)*/
   }
 
-  def sendToBus(json: String) = {
-    theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
-  }
-
-  override def postStop() = {
-    theBus.foreach(_ ! CloseConnection)
-  }
-
-  def getNow = {
-    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
-  }
 }
 
 object testMessageSender {

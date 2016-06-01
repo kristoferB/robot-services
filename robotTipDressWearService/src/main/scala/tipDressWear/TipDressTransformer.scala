@@ -1,11 +1,11 @@
-package robottipdresswear.service
+package tipDressWear
 
-import java.text.SimpleDateFormat
+import core._
+import core.Domain._
 import akka.actor._
 import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq.model._
-import com.typesafe.config.ConfigFactory
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
@@ -15,28 +15,12 @@ import com.github.nscala_time.time.Imports._
   * Created by Henrik on 2016-04-08.
   */
 
-class TipDressTransformer extends Actor {
-  val customDateFormat = new DefaultFormats {
-    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
-  }
-  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
-
+class TipDressTransformer extends ServiceBase {
   // Type aliases
   type RobotName = String
   type NrOfDeviations = Int
 
-  // Read from config file
-  val config = ConfigFactory.load()
-  val address = config.getString("activemq.address")
-  val user = config.getString("activemq.user")
-  val pass = config.getString("activemq.pass")
-  val readFrom = config.getString("service.robotTipDressWear.readFromTopic")
-  val writeTo = config.getString("service.robotTipDressWear.writeToTopic")
-
-  // The state
-  var theBus: Option[ActorRef] = None
-
-  // Local variables
+  // State
   //var counter: Int = 0
   var counterMap: Map[RobotName, Int] = Map[RobotName, Int]()
   var currentSlope: Float = 0
@@ -51,7 +35,7 @@ class TipDressTransformer extends Actor {
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom)
+      c ! ConsumeFromTopic(topic)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
@@ -151,18 +135,6 @@ class TipDressTransformer extends Actor {
   def differentiate(event1: TipDressEvent, event2: TipDressEvent): Float = {
     (event2.tipDressData.tipDressWear - event1.tipDressData.tipDressWear) /
       event2.tipDressData.eventTime.minus(event1.tipDressData.eventTime.toInstant.millis).toInstant.millis * 1000
-  }
-
-  def sendToBus(json: String) = {
-    theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
-  }
-
-  override def postStop() = {
-    theBus.foreach(_ ! CloseConnection)
-  }
-
-  def getNow = {
-    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
   }
 }
 

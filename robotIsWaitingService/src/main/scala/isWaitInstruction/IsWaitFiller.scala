@@ -1,15 +1,15 @@
-package robotiswaiting.service
+package isWaitInstruction
 
-import java.text.SimpleDateFormat
 import akka.actor._
-import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.ReActiveMQMessages._
+import com.codemettle.reactivemq._
 import com.codemettle.reactivemq.model._
-import com.typesafe.config.ConfigFactory
+import core.Domain._
+import core.Helpers._
+import core.ServiceBase
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
-import com.github.nscala_time.time.Imports._
 
 /**
   * Created by Henrik on 2016-04-08.
@@ -34,25 +34,9 @@ indicating whether the robot issues a wait* RAPID instruction of not.
 - WaitWObj: Wait for work object on conveyor.
 */
 
-class PointerTransformer extends Actor {
-  val customDateFormat = new DefaultFormats {
-    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
-  }
-  implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
-
+class IsWaitFiller extends ServiceBase {
   // Type aliases
   type Instruction = String
-
-  // Read from config file
-  val config = ConfigFactory.load()
-  val address = config.getString("activemq.address")
-  val user = config.getString("activemq.user")
-  val pass = config.getString("activemq.pass")
-  val readFrom = config.getString("service.robotIsWaiting.readFromTopic")
-  val writeTo = config.getString("service.robotIsWaiting.writeToTopic")
-
-  // The state
-  var theBus: Option[ActorRef] = None
 
   // Functions
   def receive = {
@@ -60,12 +44,11 @@ class PointerTransformer extends Actor {
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
       println("Connected: " + request)
-      c ! ConsumeFromTopic(readFrom)
+      c ! ConsumeFromTopic(topic)
       theBus = Some(c)
     case ConnectionFailed(request, reason) =>
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
-      import Helpers.JValueExtended
       val json = parse(body.toString)
       if (json.has("programPointerPosition") && json.has("instruction") && !json.has("isWaiting")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
@@ -81,26 +64,15 @@ class PointerTransformer extends Actor {
     if (instruction.startsWith("Wait")) {
       isWaiting = true
     }
-    val filledEvent: FilledPointerChangedEvent = FilledPointerChangedEvent(event.robotId, event.workCellId,
+    val filledEvent = PointerWithIsWaiting(event.robotId, event.workCellId,
       event.address, instruction, isWaiting, event.programPointerPosition)
     val json: String = write(filledEvent)
     println("From isWaiting: " + json)
     sendToBus(json)
   }
 
-  def sendToBus(json: String) = {
-    theBus.foreach{bus => bus ! SendMessage(Topic(writeTo), AMQMessage(json))}
-  }
-
-  override def postStop() = {
-    theBus.foreach(_ ! CloseConnection)
-  }
-
-  def getNow = {
-    DateTime.now(DateTimeZone.forID("Europe/Stockholm"))
-  }
 }
 
-object PointerTransformer {
-  def props = Props[PointerTransformer]
+object IsWaitFiller {
+  def props = Props[IsWaitFiller]
 }

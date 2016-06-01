@@ -1,9 +1,9 @@
-package robotcyclestore.service
+package core
 
 import org.json4s._
 
 /**
-  * Created by Henrik on 2016-04-20.
+  * Created by Henrik on 2016-04-18.
   */
 
 object Helpers {
