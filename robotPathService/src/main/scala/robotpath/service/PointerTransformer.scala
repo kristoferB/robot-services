@@ -58,9 +58,9 @@ class PointerTransformer extends Actor {
     case mess @ AMQMessage(body, prop, headers) =>
       import Helpers.JValueExtended
       val json = parse(body.toString)
-      println(json)
-      if (json.has("readResult")) {
-        println("Recievied result...")
+      println("Message: " + json)
+      if (json.has("readValue")) {
+        println("Received read result")
         val event: ModulesReadEvent = json.extract[ModulesReadEvent]
         event.readValue.foreach(task => {
           task.modules.foreach(module => moduleMap += (module.name -> module))
@@ -71,7 +71,7 @@ class PointerTransformer extends Actor {
         taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
         println(robotMap)
       } else if (json.has("programPointerPosition") && !json.has("instruction")) {
-        println(getNow)
+        println("Received programpointer")
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
         fill(event)
       } else {
@@ -86,7 +86,7 @@ class PointerTransformer extends Actor {
         if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.module)) {
           val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.module)
           val range: Range = eventPPPos.position.range
-          val instruction: Instruction = module.programCode(range.begin.row).
+          val instruction: Instruction = module.file(range.begin.row).
             slice(range.begin.column, range.end.column + 1)
           val filledEvent: FilledPointerChangedEvent =
             FilledPointerChangedEvent(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
@@ -105,8 +105,8 @@ class PointerTransformer extends Actor {
 
   def requestModules(event: PointerChangedEvent) = {
     import org.json4s.JsonDSL._
-    val jAddress = ("domain" -> "rapid") ~ ("kind" -> "tasks")
-    val json = ("command" -> "read") ~ ("robotId" -> event.robotId) ~ ("address" -> jAddress)
+    val jContents = ("robotId" -> event.robotId) ~ ("service" -> "instructionFiller")
+    val json = "newRobotEncountered" -> jContents
     println(s"Requesting modules for robot id ${event.robotId}." + json)
     sendToBus(write(json))
   }

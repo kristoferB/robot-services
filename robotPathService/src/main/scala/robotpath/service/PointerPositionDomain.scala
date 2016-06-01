@@ -13,20 +13,10 @@ case class ModulesReadEvent(robotId: String,
                             readValue: List[TaskWithModules])
 
 case class TaskWithModules(name: String,
-                           `type`: Int,
-                           cycle: Int,
-                           executionType: Int,
-                           executionStatus: Int,
                            modules: List[Module])
 
 case class Module(name: String,
-                  isEncoded: Boolean,
-                  isNoStepIn: Boolean,
-                  isNoView: Boolean,
-                  isReadOnly: Boolean,
-                  isSystem: Boolean,
-                  isViewOnly: Boolean,
-                  programCode: List[String])
+                  file: List[String])
 
 // For program pointer events
 case class FilledPointerChangedEvent(robotId: String,
@@ -47,12 +37,6 @@ case class Address(domain: String,
 case class PointerPosition(task: String,
                            position: Position,
                            time: DateTime)
-
-case class Task(name: String,
-                `type`: Int,
-                cycle: Int,
-                executionType: Int,
-                executionStatus: Int)
 
 case class Position(module: String,
                     routine: String,

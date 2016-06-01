@@ -26,18 +26,12 @@ case class Address(domain: String,
                    Kind: Int,
                    Path: List[String])
 
-case class PointerPosition(task: Task,
+case class PointerPosition(task: String,
                            position: Position,
-                           eventTime: DateTime)
+                           time: DateTime)
 
-case class Task(name: String,
-                `type`: Int,
-                cycle: Int,
-                executionType: Int,
-                executionStatus: Int)
-
-case class Position(moduleName: String,
-                    routineName: String,
+case class Position(module: String,
+                    routine: String,
                     range: Range)
 
 case class Range(begin: Location,

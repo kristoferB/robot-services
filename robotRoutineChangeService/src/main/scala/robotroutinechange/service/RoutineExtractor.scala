@@ -79,8 +79,8 @@ class RoutineExtractor extends Actor {
   def handleEvent(event: PointerChangedEvent) = {
     val priorEvent = priorEventMap(event.robotId)
     if (priorEvent.isDefined) {
-      val priorRoutine: String = priorEvent.get.programPointerPosition.position.routineName
-      val currentRoutine: String = event.programPointerPosition.position.routineName
+      val priorRoutine: String = priorEvent.get.programPointerPosition.position.routine
+      val currentRoutine: String = event.programPointerPosition.position.routine
       if (!priorRoutine.equals(currentRoutine)) {
         var json: String = ""
         activityIdMap = updateActivityIdMap(activityIdMap, event.robotId)
@@ -89,7 +89,7 @@ class RoutineExtractor extends Actor {
         if (!isWaitingRoutine(priorRoutine)) {
           val routineStopEvent =
             RoutineChangedEvent(event.robotId, event.workCellId, priorId, !isStart, priorRoutine,
-              event.programPointerPosition.eventTime)
+              event.programPointerPosition.time)
           json = write(routineStopEvent)
           println("PriorRoutine: " + json)
           sendToBus(json)
@@ -97,7 +97,7 @@ class RoutineExtractor extends Actor {
         if (!isWaitingRoutine(currentRoutine)) {
           val routineStartEvent =
             RoutineChangedEvent(event.robotId, event.workCellId, currentId, isStart, currentRoutine,
-              event.programPointerPosition.eventTime)
+              event.programPointerPosition.time)
           json = write(routineStartEvent)
           println("CurrentRoutine: " + json)
           sendToBus(json)
