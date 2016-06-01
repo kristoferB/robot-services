@@ -6,30 +6,30 @@ import com.github.nscala_time.time.Imports._
   * Created by Henrik on 2016-04-15.
   */
 
-// For cycle events
-case class CycleStartEvent(workCellId: String,
-                           cycleStart: DateTime)
+case class CycleEvent(cycleId: String,
+                      isStart: Boolean,
+                      time: DateTime,
+                      workCellId: String)
 
-case class CycleStopEvent(workCellId: String,
-                          cycleStop: DateTime)
+case class ActivityEvent(activityId: String,
+                         isStart: Boolean,
+                         name: String,
+                         robotId: String,
+                         time: DateTime,
+                         `type`: String,
+                         workCellId: String)
 
-// For routine change events
-case class RoutineChangedEvent(robotId: String,
-                               workCellId: String,
-                               activityId: String,
-                               isStart: Boolean,
-                               routineName: String,
-                               eventTime: DateTime)
+case class Activity(id: String,
+                    from: DateTime,
+                    name: String,
+                    to: DateTime,
+                    `type`: String)
 
 case class WorkCellCycle(workCellId: String,
-                         entryId: String,
+                         id: String,
                          from: DateTime,
                          to: DateTime,
-                         activities: Map[String, Map[String, List[Routine]]])
-
-case class Routine(name: String,
-                   from: DateTime,
-                   to: DateTime)
+                         activities: Map[String, Map[String, List[Activity]]])
 
 // For drawing service events
 case class RobotCycleSearchQuery(cycleId: Option[String],

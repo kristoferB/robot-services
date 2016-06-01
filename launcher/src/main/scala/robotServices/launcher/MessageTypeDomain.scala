@@ -7,18 +7,18 @@ import com.github.nscala_time.time.Imports._
   */
 
 // For cycle events
-case class CycleStartEvent(workCellId: String,
-                           cycleStart: DateTime)
+case class CycleEvent(cycleId: String,
+                      isStart: Boolean,
+                      time: DateTime,
+                      workCellId: String)
 
-case class CycleStopEvent(workCellId: String,
-                          cycleStop: DateTime)
-
-case class RoutineChangedEvent(robotId: String,
-                               workCellId: String,
-                               activityId: String,
-                               isStart: Boolean,
-                               routineName: String,
-                               eventTime: DateTime)
+case class ActivityEvent(activityId: String,
+                         isStart: Boolean,
+                         name: String,
+                         robotId: String,
+                         time: DateTime,
+                         `type`: String,
+                         workCellId: String)
 
 // For the requestModules answer
 case class ModulesReadEvent(robotId: String,

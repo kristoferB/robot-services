@@ -171,46 +171,45 @@ class testMessageSender extends Actor {
     sendToBus(json19)*/
 
     // THIS IS USED FOR TESTING THE CYCLE STORING SERVICE ONLY!
-    val isStart = true
-    val json1: String = write(RoutineChangedEvent("testId1", "1197919", "ID1", isStart, "testRout", getNow + 2000.millis))
+    val json1: String = write(ActivityEvent("routine1", true, "moveToBody", "R1", getNow + 2.seconds, "routines", "1197919"))
     println("json1: " + json1)
     sendToBus(json1)
 
     Thread.sleep(1000)
 
-    val json2: String = write(CycleStartEvent("1197919", getNow))
+    val json2: String = write(CycleEvent("cycle1", true, getNow, "1197919"))
     println("json2: " + json2)
     sendToBus(json2)
 
     Thread.sleep(1000)
 
-    val json3: String = write(RoutineChangedEvent("testId1", "1197919", "ID1", !isStart, "testRout", getNow))
+    val json3: String = write(ActivityEvent("routine1", false, "moveToBody", "R1", getNow + 2.seconds, "routines", "1197919"))
     println("json3: " + json3)
     sendToBus(json3)
 
-    val json4: String = write(RoutineChangedEvent("testId2", "1197919", "ID3", isStart, "testRout", getNow))
+    val json4: String = write(ActivityEvent("routine2", true, "pickUpDoor", "R3", getNow + 2.seconds, "routines", "1197919"))
     println("json4: " + json4)
     sendToBus(json4)
 
     Thread.sleep(1000)
 
-    val json5: String = write(RoutineChangedEvent("testId1", "1197919", "ID2", isStart, "testRout1", getNow))
+    val json5: String = write(ActivityEvent("routine3", true, "goHome", "R2", getNow, "routines", "1197919"))
     println("json5: " + json5)
     sendToBus(json5)
 
     Thread.sleep(2000)
 
-    val json6: String = write(CycleStopEvent("1197919", getNow))
+    val json6: String = write(CycleEvent("cycle1", false, getNow, "1197919"))
     println("json6: " + json6)
     sendToBus(json6)
 
     Thread.sleep(1000)
 
-    val json7: String = write(RoutineChangedEvent("testId1", "1197919", "ID2", !isStart, "testRout1", getNow - 2000.millis))
+    val json7: String = write(ActivityEvent("routine3", false, "pickUpDoor", "R2", getNow - 2.seconds, "routines", "1197919"))
     println("json7: " + json7)
     sendToBus(json7)
 
-    val json8: String = write(RoutineChangedEvent("testId2", "1197919", "ID3", !isStart, "testRout", getNow - 2000.millis))
+    val json8: String = write(ActivityEvent("routine2", false, "pickUpDoor", "R3", getNow - 2.seconds, "routines", "1197919"))
     println("json8: " + json8)
     sendToBus(json8)
 
