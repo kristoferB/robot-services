@@ -68,15 +68,16 @@ class InstructionFiller extends ServiceBase {
         if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.moduleName)) {
           val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.moduleName)
           val range: Range = eventPPPos.position.range
-          val instruction: Instruction = module.programCode(range.begin.row).
-            slice(range.begin.column, range.end.column + 1)
-          val filledEvent = PointerWithInstruction(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
+          val instruction: Instruction = module.file(range.begin.row).
+            slice(range.begin.column - 1, range.end.column + 1)
+          val filledEvent: FilledPointerChangedEvent =
+            FilledPointerChangedEvent(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
           val json = write(filledEvent)
           println("From instruction filler: " + json)
           sendToBus(json)
         } else
           println(s"The system ${event.robotId} does not contain the module called" +
-            s"${eventPPPos.position.moduleName}")
+            s"${eventPPPos.position.module}")
       } else
         println(s"The system ${event.robotId} does not contain the task called" +
           s"${eventPPPos.task}")

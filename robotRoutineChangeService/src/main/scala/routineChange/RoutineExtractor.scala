@@ -44,7 +44,7 @@ class RoutineExtractor extends ServiceBase {
       val json = parse(body.toString)
       if (json.has("programPointerPosition") && json.has("instruction") && json.has("isWaiting")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
-        priorEventMap = handlePriorEventMap(priorEventMap, event)
+        //priorEventMap = handlePriorEventMap(priorEventMap, event)
         handleEvent(event)
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
