@@ -129,7 +129,7 @@ class testMessageSender extends ServiceBase {
     Thread.sleep(1000)*/
 
     lazy val json15: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine2", Range(Location(0,4), Location(5,4))), "T_ROB1", DateTime.now - 2.seconds)))
+      PointerPosition(Position("module1", "routine2", Range(Location(0,4), Location(5,4))), "T_ROB1", DateTime.now - 1.seconds)))
 
     println("json15: " + json15)
     sendToBus(json15)
