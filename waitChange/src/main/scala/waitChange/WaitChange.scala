@@ -47,7 +47,6 @@ class WaitChange extends ServiceBase {
 
   def checkIfWaitChange(json: JValue) = {
     val event: PointerWithIsWaiting = json.extract[PointerWithIsWaiting]
-
     if (isWaiting.contains(event.robotId)) {
       if (isWaiting(event.robotId).isDefined != event.isWaiting) {
         val activityId = if (event.isWaiting) {
@@ -61,6 +60,7 @@ class WaitChange extends ServiceBase {
         }
         val activityEvent = ActivityEvent(activityId.toString, event.isWaiting, event.instruction, event.robotId,
           event.programPointerPosition.time, "wait", event.workCellId)
+        println("From waitChange: " + activityEvent)
         sendToBus(write(activityEvent))
       }
     } else {

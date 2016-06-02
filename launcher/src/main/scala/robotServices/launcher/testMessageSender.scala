@@ -34,7 +34,7 @@ class testMessageSender extends ServiceBase {
     val json1 = write(ModulesReadEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
       List[TaskWithModules](
       TaskWithModules("T_ROB1", List[Module](
-        Module("module1", List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")),
+        Module("module1", List[String]("Move1", "WaitUntil", "WaitDI", "Move2", "Move3", "WaitTime")),
         Module("module2", List[String]("Move12", "Stop12", "Move22", "Stop22", "Move32", "Stop32")))),
       TaskWithModules("T_ROB2", List[Module](
         Module("module1",List[String]("Move1", "Stop1", "Move2", "Stop2", "Move3", "Stop3")),
@@ -58,7 +58,7 @@ class testMessageSender extends ServiceBase {
     Thread.sleep(2000)
 
     val json3: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB1", DateTime.now)))
+      PointerPosition(Position("module1", "routine1", Range(Location(0,0), Location(5,0))), "T_ROB1", DateTime.now)))
 
     println("json3: " + json3)
     sendToBus(json3)
@@ -72,7 +72,7 @@ class testMessageSender extends ServiceBase {
     Thread.sleep(2000)
 
     val json5: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB2", DateTime.now)))
+      PointerPosition(Position("module1", "routine1", Range(Location(0,1), Location(9,1))), "T_ROB1", DateTime.now)))
 
     println("json5: " + json5)
     sendToBus(json5)
@@ -86,8 +86,8 @@ class testMessageSender extends ServiceBase {
 
     Thread.sleep(1000)*/
 
-    val json8: String = write(PointerChangedEvent("R2", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB2", DateTime.now)))
+    val json8: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
+      PointerPosition(Position("module1", "routine1", Range(Location(0,2), Location(6,2))), "T_ROB1", DateTime.now)))
 
     println("json8: " + json8)
     sendToBus(json8)
@@ -109,7 +109,7 @@ class testMessageSender extends ServiceBase {
     Thread.sleep(1000)*/
 
     val json11: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB2", DateTime.now)))
+      PointerPosition(Position("module1", "routine2", Range(Location(0,3), Location(5,3))), "T_ROB1", DateTime.now)))
 
     println("json11: " + json11)
     sendToBus(json11)
@@ -128,8 +128,8 @@ class testMessageSender extends ServiceBase {
 
     Thread.sleep(1000)*/
 
-    val json15: String = write(PointerChangedEvent("R2", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB2", DateTime.now - 2.seconds)))
+    val json15: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
+      PointerPosition(Position("module1", "routine2", Range(Location(0,4), Location(5,4))), "T_ROB1", DateTime.now - 2.seconds)))
 
     println("json15: " + json15)
     sendToBus(json15)
@@ -137,7 +137,7 @@ class testMessageSender extends ServiceBase {
     Thread.sleep(1000)
 
     val json16: String = write(PointerChangedEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
-      PointerPosition(Position("module1", "routine1", Range(Location(0,3), Location(5,5))), "T_ROB2", DateTime.now - 3.seconds)))
+      PointerPosition(Position("module1", "routine3", Range(Location(0,5), Location(8,5))), "T_ROB1", DateTime.now - 3.seconds)))
 
     println("json16: " + json16)
     sendToBus(json16)
