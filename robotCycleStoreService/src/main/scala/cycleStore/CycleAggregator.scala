@@ -71,7 +71,7 @@ class CycleAggregator extends ServiceBase {
         else {
           earlyOrLateEventsMap = addToEventMap(earlyOrLateEventsMap, event)
         }
-      } else if (json.has("robotCycleSearchQuery")) {
+      } else if (json.has("cycleSearchQuery")) {
         val event: RobotCycleSearchQuery = (json \ "robotCycleSearchQuery").extract[RobotCycleSearchQuery]
         retrieveFromES(event)
       } else {
