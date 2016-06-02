@@ -41,7 +41,6 @@ class InstructionFiller extends ServiceBase {
     case mess @ AMQMessage(body, prop, headers) =>
       val json = parse(body.toString)
       if (json.has("readValue")) {
-        println("Received read result")
         val event: ModulesReadEvent = json.extract[ModulesReadEvent]
         event.readValue.foreach(task => {
           task.modules.foreach(module => moduleMap += (module.name -> module))
@@ -50,7 +49,6 @@ class InstructionFiller extends ServiceBase {
         })
         robotMap += (event.robotId -> taskMap)
         taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
-        println(robotMap)
       } else if (json.has("programPointerPosition") && !json.has("instruction")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
         fill(event)

@@ -1,7 +1,6 @@
 package waitChange
 
 import java.util.UUID
-
 import akka.actor._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq._
@@ -18,8 +17,8 @@ import org.json4s.native.Serialization.write
   */
 
 /*
-Emits activity events when a robot toggles wait.
-*/
+ * Emits activity events when a robot toggles wait.
+ */
 
 class WaitChange extends ServiceBase {
   // Type aliases

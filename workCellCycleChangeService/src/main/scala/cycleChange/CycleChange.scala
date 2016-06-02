@@ -14,6 +14,7 @@ import org.json4s.native.Serialization.write
 /**
   * Created by Henrik on 2016-06-02.
   */
+
 class CycleChange extends ServiceBase {
   // Type aliases
   type Id = String

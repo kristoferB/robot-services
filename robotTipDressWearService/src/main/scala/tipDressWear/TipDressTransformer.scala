@@ -20,8 +20,7 @@ class TipDressTransformer extends ServiceBase {
   type RobotName = String
   type NrOfDeviations = Int
 
-  // State
-  //var counter: Int = 0
+  // Variables
   var counterMap: Map[RobotName, Int] = Map[RobotName, Int]()
   var currentSlope: Float = 0
   var priorEventMap: Map[RobotName, Option[TipDressEvent]] = Map[RobotName, Option[TipDressEvent]]()
