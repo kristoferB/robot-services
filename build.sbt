@@ -29,7 +29,7 @@ lazy val commonSettings = Seq(
 )
 lazy val root = project.in( file(".") ).
   aggregate(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
-    robotTipDressWearService, launcher)
+    robotTipDressWearService, waitChange, launcher)
 
 lazy val core = project.settings(commonSettings: _*)
 
@@ -59,7 +59,7 @@ lazy val robotTipDressWearService = project
 
 lazy val launcher = project.
   dependsOn(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
-    robotTipDressWearService).settings(commonSettings: _*)
+    robotTipDressWearService, waitChange).settings(commonSettings: _*)
 
 
 osgiSettings

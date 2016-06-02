@@ -1,5 +1,7 @@
 package waitChange
 
+import java.util.UUID
+
 import akka.actor._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq._
@@ -21,7 +23,11 @@ Emits activity events when a robot toggles wait.
 
 class WaitChange extends ServiceBase {
   // Type aliases
-  type Instruction = String
+  type RobotId = String
+  type ActivityId = UUID
+
+  // State
+  var isWaiting = Map[RobotId, Option[ActivityId]]()
 
   // Functions
   def receive = {
@@ -35,17 +41,34 @@ class WaitChange extends ServiceBase {
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
       val json = parse(body.toString)
-      if (json.has("isWaiting")) {
-        val event: PointerWithIsWaiting = json.extract[PointerWithIsWaiting]
-        fill(event)
-      } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
-      }
+      if (json.has("isWaiting"))
+        checkIfWaitChange(json)
   }
 
-  def fill(event: PointerWithIsWaiting) = {
+  def checkIfWaitChange(json: JValue) = {
+    val event: PointerWithIsWaiting = json.extract[PointerWithIsWaiting]
 
-
+    if (isWaiting.contains(event.robotId)) {
+      if (isWaiting(event.robotId).isDefined != event.isWaiting) {
+        val activityId = if (event.isWaiting) {
+          val id = UUID.randomUUID()
+          isWaiting += (event.robotId -> Some(id))
+          id
+        } else {
+          val id = isWaiting(event.robotId).get
+          isWaiting += (event.robotId -> None)
+          id
+        }
+        val activityEvent = ActivityEvent(activityId.toString, event.isWaiting, event.instruction, event.robotId,
+          event.programPointerPosition.time, "wait", event.workCellId)
+        sendToBus(write(activityEvent))
+      }
+    } else {
+      if (event.isWaiting)
+        isWaiting += (event.robotId -> Some(UUID.randomUUID()))
+      else
+        isWaiting += (event.robotId -> None)
+    }
   }
 
 }
