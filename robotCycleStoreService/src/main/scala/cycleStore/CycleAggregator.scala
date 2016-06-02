@@ -145,10 +145,12 @@ class CycleAggregator extends ServiceBase {
               earlyOrLateEventsMap += (robotId -> Map.empty)
             }
           }
+
           val activities = foldToActivities(workCellEvents)
 
           if (allRobotsInCycle(cycleStop.workCellId, activities)) {
             val workCellCycle = WorkCellCycle(cycleStop.workCellId, uuid, startTime, cycleStop.time, activities)
+            println("CycleAggregator sent to ES: " + workCellCycle)
             val json = write(workCellCycle)
             sendToES(json, elasticId)
           }
@@ -158,29 +160,21 @@ class CycleAggregator extends ServiceBase {
 
   def foldToActivities(workCellEvents: Map[RobotId, Map[ActivityType, ActivityEvents]]): Map[RobotId, Map[ActivityType, Activities]] = {
 
-    def helperFunction(activityEvents: Option[ActivityEvents]): Option[Activities] = activityEvents match {
-      case Some(Nil) =>
-        Some(List.empty[Activity])
-      case Some(ae1 :: ae2 :: aes) =>
-        if (ae1.isStart && !ae2.isStart)  {
-          val activity = Activity(ae1.activityId, ae1.time, ae1.name, ae2.time, ae1.`type`)
-          val rest = helperFunction(Some(aes))
-          if (rest.isDefined)
-            Some(activity :: rest.get)
-          else
-            None
-        } else
-          None
-      case _ => None
-    }
-
     workCellEvents.map { case (robotId, robotEventTypes) =>
       (robotId, robotEventTypes.map { case (eventType, events) =>
-        val activities = helperFunction(Some(events))
-        if (activities.isDefined)
-          (eventType, activities.get)
-        else
-          (eventType, List.empty)
+        val uniqueActivityIds = events.map(e => e.activityId).toSet
+        val activities = uniqueActivityIds.flatMap { id =>
+          val eventsWithId = events.filter(_.activityId == id)
+          val startEvents = eventsWithId.filter(_.isStart == true)
+          val stopEvents = eventsWithId.filter(_.isStart == false)
+          if (startEvents.length == 1 && stopEvents.length == 1) {
+            val startEvent = startEvents.head
+            val stopEvent = stopEvents.head
+            Some(Activity(id, startEvent.time, startEvent.name, stopEvent.time, eventType))
+          } else
+            None
+        }.toList
+        (eventType, activities)
       })
     }
 

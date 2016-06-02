@@ -27,8 +27,8 @@ object launcher extends App {
   val routineChangeActor = system.actorOf(RoutineExtractor.props)
   routineChangeActor ! "connect"
 
-  /*val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
-  cycleAggregatorActor ! "connect"*/
+  val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
+  cycleAggregatorActor ! "connect"
 
   /*val cutterWarnActor = system.actorOf(TipDressTransformer.props)
   cutterWarnActor ! "connect"*/
