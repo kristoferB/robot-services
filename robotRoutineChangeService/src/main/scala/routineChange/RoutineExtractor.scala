@@ -64,8 +64,8 @@ class RoutineExtractor extends ServiceBase {
   def handleEvent(event: PointerChangedEvent) = {
     val priorEvent = priorEventMap(event.robotId)
     if (priorEvent.isDefined) {
-      val priorRoutine: String = priorEvent.get.programPointerPosition.position.routineName
-      val currentRoutine: String = event.programPointerPosition.position.routineName
+      val priorRoutine: String = priorEvent.get.programPointerPosition.position.routine
+      val currentRoutine: String = event.programPointerPosition.position.routine
       if (!priorRoutine.equals(currentRoutine)) {
         var json: String = ""
         activityIdMap = updateActivityIdMap(activityIdMap, event.robotId)
@@ -73,7 +73,7 @@ class RoutineExtractor extends ServiceBase {
         val currentId = activityIdMap(event.robotId)("current")
         if (!isWaitingRoutine(priorRoutine)) {
           val routineStopEvent =
-            ActivityEvent(priorId, !isStart, priorRoutine, event.robotId, event.programPointerPosition.eventTime,
+            ActivityEvent(priorId, !isStart, priorRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
           json = write(routineStopEvent)
           println("PriorRoutine: " + json)
@@ -81,7 +81,7 @@ class RoutineExtractor extends ServiceBase {
         }
         if (!isWaitingRoutine(currentRoutine)) {
           val routineStartEvent =
-            ActivityEvent(currentId, isStart, currentRoutine, event.robotId, event.programPointerPosition.eventTime,
+            ActivityEvent(currentId, isStart, currentRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
           json = write(routineStartEvent)
           println("CurrentRoutine: " + json)
