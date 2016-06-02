@@ -24,7 +24,6 @@ class TipDressTransformer extends ServiceBase {
   //var counter: Int = 0
   var counterMap: Map[RobotName, Int] = Map[RobotName, Int]()
   var currentSlope: Float = 0
-  //var priorEvent: Option[TipDressEvent] = None
   var priorEventMap: Map[RobotName, Option[TipDressEvent]] = Map[RobotName, Option[TipDressEvent]]()
   var averageSlopeMap: Map[RobotName, Option[Float]] = Map[RobotName, Option[Float]]()
   var warnMap: Map[RobotName, NrOfDeviations] = Map[RobotName, NrOfDeviations]()

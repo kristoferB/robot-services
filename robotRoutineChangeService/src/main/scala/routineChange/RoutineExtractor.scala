@@ -23,9 +23,9 @@ class RoutineExtractor extends ServiceBase {
   // Config file
   val waitRoutines = config.getString("services.routineChange.waitRoutines")
 
-  // State
+  // Variables
   var activityIdMap: Map[RobotName, Map[String, Id]] = Map[RobotName, Map[String, Id]]()
-  var priorEventMap: Map[RobotName, Option[PointerChangedEvent]] = Map[RobotName, Option[PointerChangedEvent]]()
+  var priorEventMap: Map[RobotName, PointerChangedEvent] = Map[RobotName, PointerChangedEvent]()
   val isStart: Boolean = true
   val jsonWaitRoutines = parse(waitRoutines)
   val listOfWaitRoutines: List[String] = jsonWaitRoutines.extract[List[String]]
@@ -42,29 +42,29 @@ class RoutineExtractor extends ServiceBase {
       println("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
       val json = parse(body.toString)
-      if (json.has("programPointerPosition") && json.has("instruction") && json.has("isWaiting")) {
+      if (json.has("programPointerPosition") && !json.has("instruction")) {
         val event: PointerChangedEvent = json.extract[PointerChangedEvent]
-        //priorEventMap = handlePriorEventMap(priorEventMap, event)
+        activityIdMap = handleActivityIdMap(activityIdMap, event)
         handleEvent(event)
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
       }
   }
 
-  def handlePriorEventMap(map: Map[RobotName, Option[PointerChangedEvent]], event: PointerChangedEvent):
-  Map[RobotName, Option[PointerChangedEvent]] = {
-    var result = Map[RobotName, Option[PointerChangedEvent]]()
+  def handleActivityIdMap(map: Map[RobotName, Map[String, Id]], event: PointerChangedEvent):
+  Map[RobotName, Map[String, Id]] = {
+    var result = Map[RobotName, Map[String, Id]]()
     if (map.contains(event.robotId))
       result = map
     else
-      result = map + (event.robotId -> None)
+      result = map + (event.robotId -> Map[String, Id]("current" -> uuid))
     result
   }
 
   def handleEvent(event: PointerChangedEvent) = {
-    val priorEvent = priorEventMap(event.robotId)
-    if (priorEvent.isDefined) {
-      val priorRoutine: String = priorEvent.get.programPointerPosition.position.routine
+    if (priorEventMap.contains(event.robotId)) {
+      val priorEvent = priorEventMap(event.robotId)
+      val priorRoutine: String = priorEvent.programPointerPosition.position.routine
       val currentRoutine: String = event.programPointerPosition.position.routine
       if (!priorRoutine.equals(currentRoutine)) {
         var json: String = ""
@@ -89,15 +89,13 @@ class RoutineExtractor extends ServiceBase {
         }
       }
     }
-    priorEventMap += (event.robotId -> Some(event))
-    activityIdMap += (event.robotId -> Map[String,Id]("current" -> uuid))
+    priorEventMap += (event.robotId -> event)
   }
 
   def updateActivityIdMap(map: Map[RobotName, Map[String, Id]], robotId: String): Map[RobotName, Map[String, Id]] = {
     var result = map
     val temp = result(robotId)("current")
-    result += (robotId -> Map[String,Id]("current" -> uuid))
-    result += (robotId -> Map[String,Id]("prior" -> temp))
+    result += (robotId -> Map[String,Id]("current" -> uuid, "prior" -> temp))
     result
   }
 

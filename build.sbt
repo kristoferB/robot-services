@@ -57,9 +57,13 @@ lazy val robotTipDressWearService = project
   .settings(commonSettings: _*)
   .dependsOn(core)
 
+lazy val workCellCycleChangeService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
+
 lazy val launcher = project.
   dependsOn(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
-    robotTipDressWearService).settings(commonSettings: _*)
+    robotTipDressWearService, waitChange, workCellCycleChangeService).settings(commonSettings: _*)
 
 
 osgiSettings

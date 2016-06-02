@@ -26,15 +26,15 @@ object launcher extends App {
   val routineChangeActor = system.actorOf(RoutineExtractor.props)
   routineChangeActor ! "connect"
 
-  val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
-  cycleAggregatorActor ! "connect"
+  /*val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
+  cycleAggregatorActor ! "connect"*/
 
   /*val cutterWarnActor = system.actorOf(TipDressTransformer.props)
   cutterWarnActor ! "connect"*/
 
-  // Remove comment to test the system using the provided tester actor
+  /*// Remove comment to test the system using the provided tester actor
   val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
-  testerActor ! "connect"
+  testerActor ! "connect"*/
 
   scala.io.StdIn.readLine("Press ENTER to exit application.\n") match {
     case x => system.terminate()

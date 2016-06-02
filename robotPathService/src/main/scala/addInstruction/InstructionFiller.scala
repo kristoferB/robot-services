@@ -22,9 +22,7 @@ class InstructionFiller extends ServiceBase {
   type ModuleName = String
   type Instruction = String
 
-  // The state
-
-  // Local variables
+  // Maps
   var robotMap: Map[RobotName, Map[TaskName, Map[ModuleName, Module]]] =
     Map[RobotName, Map[TaskName, Map[ModuleName, Module]]]()
   var taskMap: Map[TaskName, Map[ModuleName, Module]] = Map[TaskName, Map[ModuleName, Module]]()
