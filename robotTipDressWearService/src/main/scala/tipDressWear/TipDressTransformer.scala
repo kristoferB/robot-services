@@ -101,7 +101,7 @@ class TipDressTransformer extends ServiceBase {
     val warn: Boolean = nrOfWarnings == 3
     if (warn) {
       val warningEvent: TipDressWarningEvent =
-        TipDressWarningEvent(event.robotId, event.workCellId, event.robotDataAddress, warn)
+        TipDressWarningEvent(event.robotId, event.workCellId, event.address, warn)
       val json = write(warningEvent)
       sendToBus(json)
     }
@@ -134,7 +134,7 @@ class TipDressTransformer extends ServiceBase {
 
   def differentiate(event1: TipDressEvent, event2: TipDressEvent): Float = {
     (event2.tipDressData.tipDressWear - event1.tipDressData.tipDressWear) /
-      event2.tipDressData.eventTime.minus(event1.tipDressData.eventTime.toInstant.millis).toInstant.millis * 1000
+      event2.tipDressData.time.minus(event1.tipDressData.time.toInstant.millis).toInstant.millis * 1000
   }
 }
 

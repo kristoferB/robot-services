@@ -51,14 +51,14 @@ class IsWaitFiller extends ServiceBase {
     case mess @ AMQMessage(body, prop, headers) =>
       val json = parse(body.toString)
       if (json.has("programPointerPosition") && json.has("instruction") && !json.has("isWaiting")) {
-        val event: PointerChangedEvent = json.extract[PointerChangedEvent]
+        val event: PointerWithInstruction = json.extract[PointerWithInstruction]
         fill(event)
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
       }
   }
 
-  def fill(event: PointerChangedEvent) = {
+  def fill(event: PointerWithInstruction) = {
     val instruction: Instruction = event.instruction
     var isWaiting: Boolean = false
     if (instruction.startsWith("Wait")) {

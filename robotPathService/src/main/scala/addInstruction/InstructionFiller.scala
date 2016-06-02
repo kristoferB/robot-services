@@ -65,13 +65,13 @@ class InstructionFiller extends ServiceBase {
     val eventPPPos = event.programPointerPosition
     if (robotMap.contains(event.robotId)) {
       if (robotMap(event.robotId).contains(eventPPPos.task)) {
-        if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.moduleName)) {
-          val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.moduleName)
+        if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.module)) {
+          val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.module)
           val range: Range = eventPPPos.position.range
           val instruction: Instruction = module.file(range.begin.row).
             slice(range.begin.column - 1, range.end.column + 1)
-          val filledEvent: FilledPointerChangedEvent =
-            FilledPointerChangedEvent(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
+          val filledEvent: PointerWithInstruction =
+            PointerWithInstruction(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
           val json = write(filledEvent)
           println("From instruction filler: " + json)
           sendToBus(json)

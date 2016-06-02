@@ -9,20 +9,20 @@ object Domain {
   // Tip Dressing
   case class TipDressWarningEvent(robotId: String,
                                   workCellId: String,
-                                  robotDataAddress: RobotDataAddress,
+                                  address: RobotDataAddress,
                                   cutterWarning: Boolean)
 
   case class TipDressEvent(robotId: String,
                            workCellId: String,
-                           robotDataAddress: RobotDataAddress,
+                           address: RobotDataAddress,
                            tipDressData: TipDressData)
 
   case class RobotDataAddress(domain: String,
                               kind: String,
-                              path: String)
+                              path: List[String])
 
   case class TipDressData(tipDressWear: Float,
-                          eventTime: DateTime)
+                          time: DateTime)
 
   // Activities
   case class Activity(id: String,
@@ -71,17 +71,14 @@ object Domain {
   case class PointerChangedEvent(robotId: String,
                                  workCellId: String,
                                  address: RapidAddress,
-                                 instruction: String,
-                                 isWaiting: Boolean,
                                  programPointerPosition: PointerPosition)
 
-  case class PointerPosition(eventTime: DateTime,
-                             module: Module,
-                             position: Position,
-                             task: String)
+  case class PointerPosition(position: Position,
+                             task: String,
+                             time: DateTime)
 
-  case class Position(moduleName: String,
-                      routineName: String,
+  case class Position(module: String,
+                      routine: String,
                       range: Range)
 
   case class Range(begin: Location,
@@ -97,14 +94,10 @@ object Domain {
                               readValue: List[TaskWithModules])
 
   case class TaskWithModules(name: String,
-                             `type`: Int,
-                             cycle: Int,
-                             executionType: Int,
-                             executionStatus: Int,
                              modules: List[Module])
 
   case class Module(name: String,
-                    programCode: List[String])
+                    file: List[String])
 
 
   // Instruction Fill
