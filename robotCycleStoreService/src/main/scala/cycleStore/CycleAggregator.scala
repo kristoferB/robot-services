@@ -60,7 +60,7 @@ class CycleAggregator extends ServiceBase {
           handleEarlyEvents(event)
         } else {
           flagMap += (event.workCellId -> false)
-          storeCycle(event, mess.properties.messageID)
+          storeCycle(event)
         }
       } else if (json.has("isStart") && json.has("activityId")) {
         val event: ActivityEvent = json.extract[ActivityEvent]
@@ -123,7 +123,7 @@ class CycleAggregator extends ServiceBase {
     }
   }
 
-  def storeCycle(cycleStop: OutgoingCycleEvent, elasticId: Option[String]) = {
+  def storeCycle(cycleStop: OutgoingCycleEvent) = {
     if(workCellStartTimeMap.contains(cycleStop.workCellId) && workCellMap.contains(cycleStop.workCellId)) {
       val cycleStartTime = workCellStartTimeMap(cycleStop.workCellId)
       val workCellRobotIds = workCellMap(cycleStop.workCellId)
@@ -149,10 +149,11 @@ class CycleAggregator extends ServiceBase {
           val activities = foldToActivities(workCellEvents, cycleStartTime, cycleStop.time)
 
           if (allRobotsInCycle(cycleStop.workCellId, activities)) {
-            val workCellCycle = WorkCellCycle(cycleStop.workCellId, uuid, cycleStartTime, cycleStop.time, activities)
+            val cycleId = uuid
+            val workCellCycle = WorkCellCycle(cycleStop.workCellId, cycleId, cycleStartTime, cycleStop.time, activities)
             println("CycleAggregator sent to ES: " + workCellCycle)
             val json = write(workCellCycle)
-            sendToES(json, elasticId)
+            sendToES(json, cycleId)
           }
       }
     }
@@ -191,9 +192,9 @@ class CycleAggregator extends ServiceBase {
       false
   }
 
-  def sendToES(json: String, elasticId: Option[String]) = {
+  def sendToES(json: String, cycleId: String) = {
     elasticClient.foreach{client => client.index(
-      index = "robot-cycle-store", `type` = "cycles", id = elasticId,
+      index = "robot-cycle-store", `type` = "cycles", id = Some(cycleId),
       data = json, refresh = true
     )}
   }
@@ -224,20 +225,22 @@ class CycleAggregator extends ServiceBase {
             val hits: Int = (json \ "hits" \ "total").extract[Int]
             if (hits == 1) {
               val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[WorkCellCycle]
-              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", List[WorkCellCycle](extractedCycles))
-              val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> robotCyclesResponse))
+              val robotCyclesResponse =
+                RobotCyclesResponse(s"${event.workCellId}", None, Some(List[WorkCellCycle](extractedCycles)))
+              val jsonResponse = write(Map[String, RobotCyclesResponse]("cycleSearchResult" -> robotCyclesResponse))
               sendToBus(jsonResponse)
             } else {
               val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
-              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", extractedCycles)
-              val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> robotCyclesResponse))
+              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", None, Some(extractedCycles))
+              val jsonResponse = write(Map[String, RobotCyclesResponse]("cycleSearchResult" -> robotCyclesResponse))
               sendToBus(jsonResponse)
             }
         }
       }
     } else {
-      val emptyResponse = RobotCyclesResponse(s"${event.workCellId}", List.empty[WorkCellCycle])
-      val jsonResponse = write(Map[String, RobotCyclesResponse]("robotCyclesResponse" -> emptyResponse))
+      val errorMessage = "Id or time span has not been provided. Either is required."
+      val emptyResponse = RobotCyclesResponse(s"${event.workCellId}", Some(errorMessage), None)
+      val jsonResponse = write(Map[String, RobotCyclesResponse]("cycleSearchResult" -> emptyResponse))
       sendToBus(jsonResponse)
     }
   }

@@ -5,6 +5,7 @@ import com.github.nscala_time.time.Imports._
 /**
   * Created by daniel on 2016-06-01.
   */
+
 object Domain {
   // Tip Dressing
   case class TipDressWarningEvent(robotId: String,
@@ -65,7 +66,8 @@ object Domain {
                       stop: DateTime)
 
   case class RobotCyclesResponse(workCellId: String,
-                                 foundCycles: List[WorkCellCycle])
+                                 error: Option[String],
+                                 foundCycles: Option[List[WorkCellCycle]])
 
   // Robot Endpoint
   case class RapidAddress(domain: String,
