@@ -3,7 +3,6 @@ package robotServices.launcher
 import addInstruction.InstructionFiller
 import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.stream.ActorMaterializer
 import cycleStore.CycleAggregator
 import isWaitInstruction.IsWaitFiller
 import routineChange.RoutineExtractor
@@ -16,7 +15,6 @@ import tipDressWear.TipDressTransformer
 object launcher extends App {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
-  implicit val materializer = ActorMaterializer()
   val logger = Logging(system, "SimpleService")
 
   val fillWithInstructionActor = system.actorOf(InstructionFiller.props)

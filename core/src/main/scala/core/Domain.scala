@@ -71,8 +71,6 @@ object Domain {
   case class PointerChangedEvent(robotId: String,
                                  workCellId: String,
                                  address: RapidAddress,
-                                 instruction: String,
-                                 isWaiting: Boolean,
                                  programPointerPosition: PointerPosition)
 
   case class PointerPosition(eventTime: DateTime,
@@ -90,6 +88,21 @@ object Domain {
   case class Location(column: Int,
                       row: Int)
 
+  // Instruction Fill
+  case class PointerWithInstruction(robotId: String,
+                                    workCellId: String,
+                                    address: RapidAddress,
+                                    instruction: String,
+                                    programPointerPosition: PointerPosition)
+
+  // Is Waiting Fill
+  case class PointerWithIsWaiting(robotId: String,
+                                  workCellId: String,
+                                  address: RapidAddress,
+                                  instruction: String,
+                                  isWaiting: Boolean,
+                                  programPointerPosition: PointerPosition)
+
   // RAPID Modules
   case class ModulesReadEvent(robotId: String,
                               workCellId: String,
@@ -105,20 +118,4 @@ object Domain {
 
   case class Module(name: String,
                     programCode: List[String])
-
-
-  // Instruction Fill
-  case class PointerWithInstruction(robotId: String,
-                                    workCellId: String,
-                                    address: RapidAddress,
-                                    instruction: String,
-                                    programPointerPosition: PointerPosition)
-
-  // Is Waiting Fill
-  case class PointerWithIsWaiting(robotId: String,
-                                  workCellId: String,
-                                  address: RapidAddress,
-                                  instruction: String,
-                                  isWaiting: Boolean,
-                                  programPointerPosition: PointerPosition)
 }
