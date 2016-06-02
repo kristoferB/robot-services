@@ -7,6 +7,7 @@ import cycleStore.CycleAggregator
 import isWaitInstruction.IsWaitFiller
 import routineChange.RoutineExtractor
 import tipDressWear.TipDressTransformer
+import waitChange.WaitChange
 
 /**
   * Created by Henrik on 2016-05-02.
@@ -31,6 +32,9 @@ object launcher extends App {
 
   /*val cutterWarnActor = system.actorOf(TipDressTransformer.props)
   cutterWarnActor ! "connect"*/
+
+  val waitChangeActor = system.actorOf(WaitChange.props)
+  waitChangeActor ! "connect"
 
   /*// Remove comment to test the system using the provided tester actor
   val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
