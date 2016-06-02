@@ -39,10 +39,16 @@ object Domain {
                            `type`: String,
                            workCellId: String)
 
-  case class CycleEvent(cycleId: String,
-                        isStart: Boolean,
-                        time: DateTime,
-                        workCellId: String)
+  case class IncomingCycleEvent(address: SignalAddress,
+                                newSignalState: NewSignalState,
+                                robotId: String,
+                                time: DateTime,
+                                workCellId: String)
+
+  case class OutgoingCycleEvent(cycleId: String,
+                                isStart: Boolean,
+                                time: DateTime,
+                                workCellId: String)
 
   // Cycle Fold, Store and Search
   case class WorkCellCycle(workCellId: String,
@@ -66,6 +72,13 @@ object Domain {
                           kind: String,
                           path: List[String])
 
+  case class SignalAddress(domain: String,
+                           signal: String)
+
+  // IO Signals
+  case class NewSignalState(value: Float,
+                            simulated: Boolean,
+                            quality: Map[String, Int])
 
   // Program Pointer
   case class PointerChangedEvent(robotId: String,

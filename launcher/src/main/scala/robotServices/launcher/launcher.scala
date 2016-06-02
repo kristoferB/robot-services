@@ -6,6 +6,7 @@ import akka.event.Logging
 import cycleStore.CycleAggregator
 import isWaitInstruction.IsWaitFiller
 import routineChange.RoutineExtractor
+import cycleChange.CycleChange
 import tipDressWear.TipDressTransformer
 import waitChange.WaitChange
 
@@ -27,14 +28,17 @@ object launcher extends App {
   val routineChangeActor = system.actorOf(RoutineExtractor.props)
   routineChangeActor ! "connect"
 
+  val cycleEventActor = system.actorOf(CycleChange.props)
+  cycleEventActor ! "connect"
+
   val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
   cycleAggregatorActor ! "connect"
 
   /*val cutterWarnActor = system.actorOf(TipDressTransformer.props)
   cutterWarnActor ! "connect"*/
 
-  val waitChangeActor = system.actorOf(WaitChange.props)
-  waitChangeActor ! "connect"
+  /*val waitChangeActor = system.actorOf(WaitChange.props)
+  waitChangeActor ! "connect"*/
 
   // Remove comment to test the system using the provided tester actor
   val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)

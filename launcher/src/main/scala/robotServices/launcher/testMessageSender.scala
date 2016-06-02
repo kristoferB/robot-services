@@ -65,7 +65,7 @@ class testMessageSender extends ServiceBase {
 
     Thread.sleep(1000)
 
-    lazy val json4: String = write(CycleEvent("cycle1", isStart = true, DateTime.now, "1197919"))
+    lazy val json4: String = write(OutgoingCycleEvent("cycle1", isStart = true, DateTime.now, "1197919"))
     println("json4: " + json4)
     sendToBus(json4)
 
@@ -116,7 +116,7 @@ class testMessageSender extends ServiceBase {
 
     Thread.sleep(2000)
 
-    lazy val json12: String = write(CycleEvent("cycle1", isStart = false, DateTime.now, "1197919"))
+    lazy val json12: String = write(OutgoingCycleEvent("cycle1", isStart = false, DateTime.now, "1197919"))
 
     println("json12: " + json12)
     sendToBus(json12)

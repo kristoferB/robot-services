@@ -53,7 +53,7 @@ class CycleAggregator extends ServiceBase {
     case mess @ AMQMessage(body, prop, headers) =>
       val json = parse(body.toString)
       if (json.has("isStart") && json.has("cycleId")) {
-        val event: CycleEvent = json.extract[CycleEvent]
+        val event: OutgoingCycleEvent = json.extract[OutgoingCycleEvent]
         if (event.isStart) {
           flagMap += (event.workCellId -> true)
           workCellStartTimeMap += (event.workCellId -> event.time)
@@ -107,7 +107,7 @@ class CycleAggregator extends ServiceBase {
     map + (event.robotId -> typeToEvents)
   }
 
-  def handleEarlyEvents(startEvent: CycleEvent) = {
+  def handleEarlyEvents(startEvent: OutgoingCycleEvent) = {
     if(workCellMap.contains(startEvent.workCellId)) {
       workCellMap(startEvent.workCellId).foreach { robotId: RobotId =>
         if (earlyOrLateEventsMap.contains(robotId)) {
@@ -123,7 +123,7 @@ class CycleAggregator extends ServiceBase {
     }
   }
 
-  def storeCycle(cycleStop: CycleEvent, elasticId: Option[String]) = {
+  def storeCycle(cycleStop: OutgoingCycleEvent, elasticId: Option[String]) = {
     if(workCellStartTimeMap.contains(cycleStop.workCellId) && workCellMap.contains(cycleStop.workCellId)) {
       val cycleStartTime = workCellStartTimeMap(cycleStop.workCellId)
       val workCellRobotIds = workCellMap(cycleStop.workCellId)
