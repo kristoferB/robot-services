@@ -13,25 +13,16 @@ lazy val commonSettings = Seq(
   scalacOptions := Seq("-unchecked", "-feature", "-deprecation", "-encoding", "utf8"),
 
   libraryDependencies ++= {
-    val akkaV       = "2.4.1"
-    val akkaStreamV = "2.0.1"
-    val scalaTestV  = "2.2.5"
     Seq(
       "com.typesafe"       % "config"                               % "1.3.0",
-      "com.typesafe.akka" %% "akka-actor"                           % akkaV,
-      "com.typesafe.akka" %% "akka-stream-experimental"             % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-core-experimental"          % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-experimental"               % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-spray-json-experimental"    % akkaStreamV,
-      "com.typesafe.akka" %% "akka-http-testkit-experimental"       % akkaStreamV,
+      "com.typesafe.akka" %% "akka-actor"                           % "2.4.6",
       "com.codemettle.reactivemq" %% "reactivemq"                   % "0.5.4",
       "org.apache.activemq" % "activemq-client"                     % "5.13.1",
       "org.json4s" %% "json4s-native"                               % "3.3.0",
       "org.json4s" %% "json4s-jackson"                              % "3.3.0",
       "org.json4s" %% "json4s-ext"                                  % "3.3.0",
       "com.github.nscala-time" %% "nscala-time"                     % "1.8.0",
-      "wabisabi" %% "wabisabi"                                      % "2.1.4",
-      "org.scalatest"     %% "scalatest"                            % scalaTestV % "test"
+      "wabisabi" %% "wabisabi"                                      % "2.1.4"
     )
   },
     resolvers += "gphat" at "https://raw.github.com/gphat/mvn-repo/master/releases/"
@@ -47,6 +38,10 @@ lazy val robotPathService = project
   .dependsOn(core)
 
 lazy val robotIsWaitingService = project
+  .settings(commonSettings: _*)
+  .dependsOn(core)
+
+lazy val waitChange = project
   .settings(commonSettings: _*)
   .dependsOn(core)
 
