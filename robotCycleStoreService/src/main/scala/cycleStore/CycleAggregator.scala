@@ -38,45 +38,39 @@ class CycleAggregator extends ServiceBase {
   var workCellMap: Map[WorkCellId, List[RobotId]] = Map.empty
   var workCellStartTimeMap: Map[WorkCellId, DateTime] = Map.empty
 
-  // Functions
-  override def receive() = {
+  override def handleOtherMessages = {
     case "connect" =>
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      val json = parse(body.toString)
-      if (json.has("isStart") && json.has("cycleId")) {
-        val event: OutgoingCycleEvent = json.extract[OutgoingCycleEvent]
-        if (event.isStart) {
-          flagMap += (event.workCellId -> true)
-          workCellStartTimeMap += (event.workCellId -> event.time)
-          cycleEventsMap = resetCycleEventsMap(cycleEventsMap, event)
-          handleEarlyEvents(event)
-        } else {
-          flagMap += (event.workCellId -> false)
-          storeCycle(event)
-        }
-      } else if (json.has("isStart") && json.has("activityId")) {
-        val event: ActivityEvent = json.extract[ActivityEvent]
-        updateWorkCellMap(event)
-        updateFlagMap(event.workCellId)
-        if (flagMap(event.workCellId))
-          cycleEventsMap = addToEventMap(cycleEventsMap, event)
-        else {
-          earlyOrLateEventsMap = addToEventMap(earlyOrLateEventsMap, event)
-        }
-      } else if (json.has("timeSpan")) {
-        val event: RobotCycleSearchQuery = json.extract[RobotCycleSearchQuery]
-        retrieveFromES(event)
+  }
+
+  def handleAmqMessage(json: JValue): Unit = {
+    if (json.has("isStart") && json.has("cycleId")) {
+      val event: OutgoingCycleEvent = json.extract[OutgoingCycleEvent]
+      if (event.isStart) {
+        flagMap += (event.workCellId -> true)
+        workCellStartTimeMap += (event.workCellId -> event.time)
+        cycleEventsMap = resetCycleEventsMap(cycleEventsMap, event)
+        handleEarlyEvents(event)
       } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
+        flagMap += (event.workCellId -> false)
+        storeCycle(event)
       }
+    } else if (json.has("isStart") && json.has("activityId")) {
+      val event: ActivityEvent = json.extract[ActivityEvent]
+      updateWorkCellMap(event)
+      updateFlagMap(event.workCellId)
+      if (flagMap(event.workCellId))
+        cycleEventsMap = addToEventMap(cycleEventsMap, event)
+      else {
+        earlyOrLateEventsMap = addToEventMap(earlyOrLateEventsMap, event)
+      }
+    } else if (json.has("timeSpan")) {
+      val event: RobotCycleSearchQuery = json.extract[RobotCycleSearchQuery]
+      retrieveFromES(event)
+    } else {
+      // do nothing... OR println("Received message of unmanageable type property.")
+    }
   }
 
   override def postStop() = {
@@ -267,8 +261,6 @@ class CycleAggregator extends ServiceBase {
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString
-
-  def handleAmqMessage(json: JValue) {} // Not used in this class since "receive" is overridden
 }
 
 object CycleAggregator {

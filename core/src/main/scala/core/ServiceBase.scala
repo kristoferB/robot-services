@@ -30,7 +30,7 @@ trait ServiceBase extends Actor {
   var theBus: Option[ActorRef] = None
 
   // Methods
-  def receive() = {
+  override final def receive() = {
     case "connect" =>
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
@@ -42,6 +42,11 @@ trait ServiceBase extends Actor {
     case mess @ AMQMessage(body, prop, headers) =>
       val json: JValue = parse(body.toString)
       handleAmqMessage(json)
+    case m => handleOtherMessages(m)
+  }
+
+  def handleOtherMessages: PartialFunction[Any, Unit] = {
+    case _ => Unit
   }
 
   def sendToBus(json: String) = {
