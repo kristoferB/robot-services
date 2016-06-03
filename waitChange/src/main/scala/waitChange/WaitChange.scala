@@ -1,15 +1,11 @@
 package waitChange
 
-import java.util.UUID
 import akka.actor._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.model._
 import core.Domain._
 import core.Helpers._
 import core.ServiceBase
+import java.util.UUID
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 
 /**
@@ -29,19 +25,9 @@ class WaitChange extends ServiceBase {
   var isWaiting = Map[RobotId, Option[ActivityId]]()
 
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      val json = parse(body.toString)
-      if (json.has("isWaiting"))
-        checkIfWaitChange(json)
+  def handleAmqMessage(json: JValue) = {
+    if (json.has("isWaiting"))
+      checkIfWaitChange(json)
   }
 
   def checkIfWaitChange(json: JValue) = {
@@ -69,7 +55,6 @@ class WaitChange extends ServiceBase {
         isWaiting += (event.robotId -> None)
     }
   }
-
 }
 
 object WaitChange {

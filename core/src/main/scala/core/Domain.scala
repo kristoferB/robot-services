@@ -62,8 +62,8 @@ object Domain {
                                    timeSpan: Option[TimeSpan],
                                    workCellId: String)
 
-  case class TimeSpan(start: DateTime,
-                      stop: DateTime)
+  case class TimeSpan(from: DateTime,
+                      to: DateTime)
 
   case class RobotCyclesResponse(workCellId: String,
                                  error: Option[String],

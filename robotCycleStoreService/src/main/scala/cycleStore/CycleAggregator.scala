@@ -12,7 +12,6 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 import wabisabi._
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.{Failure, Success}
@@ -40,7 +39,7 @@ class CycleAggregator extends ServiceBase {
   var workCellStartTimeMap: Map[WorkCellId, DateTime] = Map.empty
 
   // Functions
-  def receive = {
+  override def receive() = {
     case "connect" =>
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
@@ -57,6 +56,7 @@ class CycleAggregator extends ServiceBase {
         if (event.isStart) {
           flagMap += (event.workCellId -> true)
           workCellStartTimeMap += (event.workCellId -> event.time)
+          cycleEventsMap = resetCycleEventsMap(cycleEventsMap, event)
           handleEarlyEvents(event)
         } else {
           flagMap += (event.workCellId -> false)
@@ -71,12 +71,29 @@ class CycleAggregator extends ServiceBase {
         else {
           earlyOrLateEventsMap = addToEventMap(earlyOrLateEventsMap, event)
         }
-      } else if (json.has("cycleSearchQuery")) {
-        val event: RobotCycleSearchQuery = (json \ "robotCycleSearchQuery").extract[RobotCycleSearchQuery]
+      } else if (json.has("timeSpan")) {
+        val event: RobotCycleSearchQuery = json.extract[RobotCycleSearchQuery]
         retrieveFromES(event)
       } else {
         // do nothing... OR println("Received message of unmanageable type property.")
       }
+  }
+
+  override def postStop() = {
+    theBus.foreach(_ ! CloseConnection)
+    Client.shutdown()
+  }
+
+  def resetCycleEventsMap(map: Map[RobotId, Map[ActivityType, ActivityEvents]], event: OutgoingCycleEvent):
+  Map[RobotId, Map[ActivityType, ActivityEvents]] = {
+    var result = map
+    if(workCellMap.contains(event.workCellId)) {
+      workCellMap(event.workCellId).foreach { robotId: RobotId =>
+        if (result.contains(robotId))
+          result += (robotId -> Map.empty[ActivityType, ActivityEvents])
+      }
+    }
+    result
   }
 
   def updateWorkCellMap(event: ActivityEvent) = {
@@ -160,7 +177,6 @@ class CycleAggregator extends ServiceBase {
   }
 
   def foldToActivities(workCellEvents: Map[RobotId, Map[ActivityType, ActivityEvents]], cycleStartTime: DateTime, cycleStopTime: DateTime): Map[RobotId, Map[ActivityType, Activities]] = {
-
     workCellEvents.map { case (robotId, robotEventTypes) =>
       (robotId, robotEventTypes.map { case (eventType, events) =>
         val uniqueActivityIds = events.map(e => e.activityId).toSet
@@ -209,9 +225,9 @@ class CycleAggregator extends ServiceBase {
       jsonQuery = Some("{ \"size\" : 20, \"query\": { \"bool\" :{ \"must\" : [ { \"term\" : { \"workCellId\" : \"" +
         s"${event.workCellId}" +
         "\" } },{ \"range\" : { \"from\" : { \"gte\" : \"" +
-        s"${event.timeSpan.get.start}" +
+        s"${event.timeSpan.get.from}" +
         "\" } } }, { \"range\" : { \"to\" : { \"lte\" : \"" +
-        s"${event.timeSpan.get.stop}" +
+        s"${event.timeSpan.get.to}" +
         "\" } } } ] } } }")
     }
     if (jsonQuery.isDefined) {
@@ -222,18 +238,23 @@ class CycleAggregator extends ServiceBase {
           case Failure(e) => println("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
           case Success(cycles) =>
             val json = parse(cycles)
-            val hits: Int = (json \ "hits" \ "total").extract[Int]
-            if (hits == 1) {
-              val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[WorkCellCycle]
-              val robotCyclesResponse =
-                RobotCyclesResponse(s"${event.workCellId}", None, Some(List[WorkCellCycle](extractedCycles)))
-              val jsonResponse = write(Map[String, RobotCyclesResponse]("cycleSearchResult" -> robotCyclesResponse))
-              sendToBus(jsonResponse)
+            if (json.has("error")) {
+              val errorMessage = (json \ "error" \ "type").extract[String]
+              println(errorMessage)
             } else {
-              val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
-              val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", None, Some(extractedCycles))
-              val jsonResponse = write(Map[String, RobotCyclesResponse]("cycleSearchResult" -> robotCyclesResponse))
-              sendToBus(jsonResponse)
+              val hits: Int = (json \ "hits" \ "total").extract[Int]
+              if (hits == 1) {
+                val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[WorkCellCycle]
+                val robotCyclesResponse =
+                  RobotCyclesResponse(s"${event.workCellId}", None, Some(List[WorkCellCycle](extractedCycles)))
+                val jsonResponse = write(robotCyclesResponse)
+                sendToBus(jsonResponse)
+              } else {
+                val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
+                val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", None, Some(extractedCycles))
+                val jsonResponse = write(robotCyclesResponse)
+                sendToBus(jsonResponse)
+              }
             }
         }
       }
@@ -246,6 +267,8 @@ class CycleAggregator extends ServiceBase {
   }
 
   def uuid: String = java.util.UUID.randomUUID.toString
+
+  def handleAmqMessage(json: JValue) {} // Not used in this class since "receive" is overridden
 }
 
 object CycleAggregator {

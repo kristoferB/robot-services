@@ -1,14 +1,10 @@
 package addInstruction
 
 import akka.actor._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.model._
 import core.ServiceBase
 import core.Domain._
 import core.Helpers._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 
 /**
@@ -29,32 +25,22 @@ class InstructionFiller extends ServiceBase {
   var moduleMap: Map[ModuleName, Module] = Map[ModuleName, Module]()
 
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      val json = parse(body.toString)
-      if (json.has("readValue")) {
-        val event: ModulesReadEvent = json.extract[ModulesReadEvent]
-        event.readValue.foreach(task => {
-          task.modules.foreach(module => moduleMap += (module.name -> module))
-          taskMap += (task.name -> moduleMap)
-          moduleMap = Map.empty[ModuleName, Module]
-        })
-        robotMap += (event.robotId -> taskMap)
-        taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
-      } else if (json.has("programPointerPosition") && !json.has("instruction")) {
-        val event: PointerChangedEvent = json.extract[PointerChangedEvent]
-        fill(event)
-      } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
-      }
+  def handleAmqMessage(json: JValue) = {
+    if (json.has("readValue")) {
+      val event: ModulesReadEvent = json.extract[ModulesReadEvent]
+      event.readValue.foreach(task => {
+        task.modules.foreach(module => moduleMap += (module.name -> module))
+        taskMap += (task.name -> moduleMap)
+        moduleMap = Map.empty[ModuleName, Module]
+      })
+      robotMap += (event.robotId -> taskMap)
+      taskMap = Map.empty[TaskName, Map[ModuleName, Module]]
+    } else if (json.has("programPointerPosition") && !json.has("instruction")) {
+      val event: PointerChangedEvent = json.extract[PointerChangedEvent]
+      fill(event)
+    } else {
+      // do nothing... OR println("Received message of unmanageable type property.")
+    }
   }
 
   def fill(event: PointerChangedEvent) = {
@@ -83,8 +69,7 @@ class InstructionFiller extends ServiceBase {
 
   def requestModules(event: PointerChangedEvent) = {
     import org.json4s.JsonDSL._
-    val jContents = ("robotId" -> event.robotId) ~ ("service" -> "instructionFiller")
-    val json = "newRobotEncountered" -> jContents
+    val json = ("event" -> "newRobotEncountered") ~ ("robotId" -> event.robotId) ~ ("service" -> "instructionFiller")
     println(s"Requesting modules for robot id ${event.robotId}." + json)
     sendToBus(write(json))
   }

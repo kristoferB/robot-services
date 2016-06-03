@@ -1,13 +1,10 @@
 package tipDressWear
 
-import core._
-import core.Domain._
 import akka.actor._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq.model._
+import core.ServiceBase
+import core.Domain._
+import core.Helpers._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 import com.github.nscala_time.time.Imports._
 
@@ -28,38 +25,27 @@ class TipDressTransformer extends ServiceBase {
   var warnMap: Map[RobotName, NrOfDeviations] = Map[RobotName, NrOfDeviations]()
 
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      import Helpers.JValueExtended
-      val json = parse(body.toString)
-      if (json.has("tipDressData")) {
-        val event: TipDressEvent = json.extract[TipDressEvent]
-        warnMap = handleWarnMap(warnMap, event)
-        averageSlopeMap = handleSlopeMap(averageSlopeMap, event)
-        counterMap = handleCounterMap(counterMap, event)
-        if (!priorEventMap.contains(event.robotId))
-          priorEventMap += (event.robotId -> Some(event))
+  def handleAmqMessage(json: JValue) = {
+    if (json.has("tipDressData")) {
+      val event: TipDressEvent = json.extract[TipDressEvent]
+      warnMap = handleWarnMap(warnMap, event)
+      averageSlopeMap = handleSlopeMap(averageSlopeMap, event)
+      counterMap = handleCounterMap(counterMap, event)
+      if (!priorEventMap.contains(event.robotId))
+        priorEventMap += (event.robotId -> Some(event))
+      else {
+        val priorEvent = priorEventMap(event.robotId)
+        currentSlope = differentiate(priorEvent.get, event)
+        if (currentSlope <= 0)
+          assessRiskOfCutterBreakdown(event)
         else {
-          val priorEvent = priorEventMap(event.robotId)
-          currentSlope = differentiate(priorEvent.get, event)
-          if (currentSlope <= 0)
-            assessRiskOfCutterBreakdown(event)
-          else {
-            reset(event)
-          }
+          reset(event)
         }
-        assessWarningNeed(event)
-      } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
       }
+      assessWarningNeed(event)
+    } else {
+      // do nothing... OR println("Received message of unmanageable type property.")
+    }
   }
 
   def handleWarnMap(map: Map[RobotName, NrOfDeviations], event: TipDressEvent): Map[RobotName, NrOfDeviations] = {

@@ -1,15 +1,12 @@
 package routineChange
 
 import akka.actor._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq.model._
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.native.Serialization.write
 import core.ServiceBase
 import core.Domain._
 import core.Helpers._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.native.Serialization.write
 
 /**
   * Created by Henrik on 2016-05-10.
@@ -31,24 +28,14 @@ class RoutineExtractor extends ServiceBase {
   val listOfWaitRoutines: List[String] = jsonWaitRoutines.extract[List[String]]
 
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      val json = parse(body.toString)
-      if (json.has("programPointerPosition") && !json.has("instruction")) {
-        val event: PointerChangedEvent = json.extract[PointerChangedEvent]
-        activityIdMap = handleActivityIdMap(activityIdMap, event)
-        handleEvent(event)
-      } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
-      }
+  def handleAmqMessage(json: JValue) = {
+    if (json.has("programPointerPosition") && !json.has("instruction")) {
+      val event: PointerChangedEvent = json.extract[PointerChangedEvent]
+      activityIdMap = handleActivityIdMap(activityIdMap, event)
+      handleEvent(event)
+    } else {
+      // do nothing... OR println("Received message of unmanageable type property.")
+    }
   }
 
   def handleActivityIdMap(map: Map[RobotName, Map[String, Id]], event: PointerChangedEvent):

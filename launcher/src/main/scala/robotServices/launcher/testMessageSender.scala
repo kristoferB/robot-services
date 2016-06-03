@@ -1,13 +1,10 @@
 package robotServices.launcher
 
 import akka.actor._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.model._
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.ConfigFactory
 import core.Domain._
 import core.ServiceBase
+import org.json4s.JsonAST.JValue
 import org.json4s.native.Serialization.write
 
 /**
@@ -16,21 +13,9 @@ import org.json4s.native.Serialization.write
 
 class testMessageSender extends ServiceBase {
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-      sendMessages()
-    case ConnectionFailed(request, reason) =>
-      println("failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) => // does nothing
-  }
+  def handleAmqMessage(json: JValue) = { } // does nothing
 
   def sendMessages() = {
-
     lazy val json1 = write(ModulesReadEvent("R1", "1197919", RapidAddress("rapid", "programPointer", List.empty),
       List[TaskWithModules](
       TaskWithModules("T_ROB1", List[Module](

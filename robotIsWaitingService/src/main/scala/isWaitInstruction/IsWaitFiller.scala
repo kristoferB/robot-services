@@ -1,14 +1,10 @@
 package isWaitInstruction
 
 import akka.actor._
-import com.codemettle.reactivemq.ReActiveMQMessages._
-import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.model._
 import core.Domain._
 import core.Helpers._
 import core.ServiceBase
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 
 /**
@@ -39,23 +35,13 @@ class IsWaitFiller extends ServiceBase {
   type Instruction = String
 
   // Functions
-  def receive = {
-    case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
-    case ConnectionEstablished(request, c) =>
-      println("Connected: " + request)
-      c ! ConsumeFromTopic(topic)
-      theBus = Some(c)
-    case ConnectionFailed(request, reason) =>
-      println("Connection failed: " + reason)
-    case mess @ AMQMessage(body, prop, headers) =>
-      val json = parse(body.toString)
-      if (json.has("programPointerPosition") && json.has("instruction") && !json.has("isWaiting")) {
-        val event: PointerWithInstruction = json.extract[PointerWithInstruction]
-        fill(event)
-      } else {
-        // do nothing... OR println("Received message of unmanageable type property.")
-      }
+  def handleAmqMessage(json: JValue) = {
+    if (json.has("programPointerPosition") && json.has("instruction") && !json.has("isWaiting")) {
+      val event: PointerWithInstruction = json.extract[PointerWithInstruction]
+      fill(event)
+    } else {
+      // do nothing... OR println("Received message of unmanageable type property.")
+    }
   }
 
   def fill(event: PointerWithInstruction) = {

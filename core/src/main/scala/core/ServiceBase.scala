@@ -1,17 +1,19 @@
 package core
 
 import java.text.SimpleDateFormat
-
-import akka.actor.{Actor, ActorRef}
-import com.codemettle.reactivemq.ReActiveMQMessages.{CloseConnection, SendMessage}
-import com.codemettle.reactivemq.model.{AMQMessage, Topic}
+import com.codemettle.reactivemq.ReActiveMQMessages._
+import com.codemettle.reactivemq._
+import com.codemettle.reactivemq.model._
+import akka.actor._
 import com.typesafe.config.ConfigFactory
+import org.json4s._
 import org.json4s.DefaultFormats
-import wabisabi.Client
+import org.json4s.jackson.JsonMethods._
+
 
 trait ServiceBase extends Actor {
   val customDateFormat = new DefaultFormats {
-    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
   }
   implicit val formats = customDateFormat ++ org.json4s.ext.JodaTimeSerializers.all // for json serialization
 
@@ -27,12 +29,29 @@ trait ServiceBase extends Actor {
   // The state
   var theBus: Option[ActorRef] = None
 
+  // Methods
+  def receive() = {
+    case "connect" =>
+      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
+    case ConnectionEstablished(request, c) =>
+      println("Connected: " + request)
+      c ! ConsumeFromTopic(topic)
+      theBus = Some(c)
+    case ConnectionFailed(request, reason) =>
+      println("Connection failed: " + reason)
+    case mess @ AMQMessage(body, prop, headers) =>
+      val json: JValue = parse(body.toString)
+      handleAmqMessage(json)
+  }
+
   def sendToBus(json: String) = {
     theBus.foreach{bus => bus ! SendMessage(Topic(topic), AMQMessage(json))}
   }
 
   override def postStop() = {
     theBus.foreach(_ ! CloseConnection)
-    Client.shutdown()
   }
+
+  // Abstract methods
+  def handleAmqMessage(json: JValue)
 }
