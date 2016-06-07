@@ -51,6 +51,14 @@ object Domain {
                                 time: DateTime,
                                 workCellId: String)
 
+  // Get work cells from endpoint
+  case class WorkCell(id: String,
+                      description: String,
+                      robots: List[Robot])
+
+  case class Robot(id: String,
+                   name: String)
+
   // Cycle Fold, Store and Search
   case class WorkCellCycle(workCellId: String,
                            id: String,
