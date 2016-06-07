@@ -93,9 +93,9 @@ class CycleAggregator extends ServiceBase {
   def updateWorkCellMap(event: ActivityEvent) = {
     if (workCellMap.contains(event.workCellId)) {
       val workCell = workCellMap(event.workCellId)
-      if (workCell.contains(event.robotId)) {
+      if (workCell.contains(event.robotId))
         workCellMap = workCellMap
-      } else {
+      else {
         val newRobotList = workCellMap(event.workCellId) :+ event.robotId
         workCellMap = workCellMap + (event.workCellId -> newRobotList)
       }
@@ -170,7 +170,8 @@ class CycleAggregator extends ServiceBase {
     }
   }
 
-  def foldToActivities(workCellEvents: Map[RobotId, Map[ActivityType, ActivityEvents]], cycleStartTime: DateTime, cycleStopTime: DateTime): Map[RobotId, Map[ActivityType, Activities]] = {
+  def foldToActivities(workCellEvents: Map[RobotId, Map[ActivityType, ActivityEvents]], cycleStartTime: DateTime,
+                       cycleStopTime: DateTime): Map[RobotId, Map[ActivityType, Activities]] = {
     workCellEvents.map { case (robotId, robotEventTypes) =>
       (robotId, robotEventTypes.map { case (eventType, events) =>
         val uniqueActivityIds = events.map(e => e.activityId).toSet
