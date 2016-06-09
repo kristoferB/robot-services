@@ -14,39 +14,62 @@ import waitChange.WaitChange
   * Created by Henrik on 2016-05-02.
   */
 
-object launcher extends App {
-  implicit val system = ActorSystem()
-  implicit val executor = system.dispatcher
-  //val logger = Logging(system, "SimpleService")
+object launcher {
 
-  val fillWithInstructionActor = system.actorOf(InstructionFiller.props)
-  fillWithInstructionActor ! "connect"
+  implicit var system: ActorSystem = null
 
-  val waitTestActor = system.actorOf(IsWaitFiller.props)
-  waitTestActor ! "connect"
+  def main(args: Array[String]): Unit = {
+    if (args.length > 0) {
+      if ("start".equals(args(0)))
+        start()
+      else if ("stop".equals(args(0)))
+        stop()
+      else if ("console".equals(args(0))) {
+        start()
+        scala.io.StdIn.readLine("Press any key to exit.\n")
+        stop()
+      }
+    }
+  }
 
-  val routineChangeActor = system.actorOf(RoutineExtractor.props)
-  routineChangeActor ! "connect"
+  private def start() = {
+    println("Starting")
 
-  val cycleEventActor = system.actorOf(CycleChange.props)
-  cycleEventActor ! "connect"
+    system = ActorSystem()
+    implicit val executor = system.dispatcher
+    //val logger = Logging(system, "SimpleService")
 
-  val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
-  cycleAggregatorActor ! "connect"
+    val fillWithInstructionActor = system.actorOf(InstructionFiller.props)
+    fillWithInstructionActor ! "connect"
 
-  val cutterWarnActor = system.actorOf(TipDressTransformer.props)
-  cutterWarnActor ! "connect"
+    val waitTestActor = system.actorOf(IsWaitFiller.props)
+    waitTestActor ! "connect"
 
-  val waitChangeActor = system.actorOf(WaitChange.props)
-  waitChangeActor ! "connect"
+    val routineChangeActor = system.actorOf(RoutineExtractor.props)
+    routineChangeActor ! "connect"
 
-  /*// Remove comment to test the system using the provided tester actor
-  val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
-  testerActor ! "connect"*/
+    val cycleEventActor = system.actorOf(CycleChange.props)
+    cycleEventActor ! "connect"
 
-  scala.io.StdIn.readLine("Press ENTER to exit application.\n") match {
-    case x =>
-      println("Shutting down. This may take a while.")
-      system.terminate()
+    val cycleAggregatorActor = system.actorOf(CycleAggregator.props)
+    cycleAggregatorActor ! "connect"
+
+    val cutterWarnActor = system.actorOf(TipDressTransformer.props)
+    cutterWarnActor ! "connect"
+
+    val waitChangeActor = system.actorOf(WaitChange.props)
+    waitChangeActor ! "connect"
+
+    println("Started")
+
+    /*// Remove comment to test the system using the provided tester actor
+    val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
+    testerActor ! "connect"*/
+  }
+
+  private def stop() = {
+    println("Stopping")
+    system.terminate()
+    println("Stopped")
   }
 }
