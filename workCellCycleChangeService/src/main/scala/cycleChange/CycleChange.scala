@@ -18,7 +18,10 @@ class CycleChange extends ServiceBase {
   type RobotId = String
   type WorkCellId = String
 
-  // Variables
+  // Config values
+  val signal = config.getString("services.cycleChange.signal")
+
+  // State
   var getWorkCellsFlag: Boolean = true
   var cycleIdMap: Map[WorkCellId, Id] = Map.empty
   var workCellMap: Map[WorkCellId, List[RobotId]] = Map.empty
@@ -27,7 +30,7 @@ class CycleChange extends ServiceBase {
 
   // Functions
   def handleAmqMessage(json: JValue) = {
-    if (json.has("newSignalState") && getWorkCellsFlag) {
+    if (json.has("newSignalState") && (json \ "address" \ "signal").extract[String].equals(signal) && getWorkCellsFlag) {
       val event: IncomingCycleEvent = json.extract[IncomingCycleEvent]
       if (!workCellMap.contains(event.workCellId))
         requestWorkCells()
