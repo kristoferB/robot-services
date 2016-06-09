@@ -10,7 +10,6 @@ import org.json4s._
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
-
 trait ServiceBase extends Actor {
   val customDateFormat = new DefaultFormats {
     override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
@@ -30,7 +29,11 @@ trait ServiceBase extends Actor {
   var theBus: Option[ActorRef] = None
 
   // Methods
-  override final def receive() = {
+  override final def receive() = handleOtherMessages orElse handleBasicMessages
+
+  def handleOtherMessages: PartialFunction[Any, Unit] = PartialFunction.empty
+
+  def handleBasicMessages: PartialFunction[Any, Unit] = {
     case "connect" =>
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
     case ConnectionEstablished(request, c) =>
@@ -42,11 +45,6 @@ trait ServiceBase extends Actor {
     case mess @ AMQMessage(body, prop, headers) =>
       val json: JValue = parse(body.toString)
       handleAmqMessage(json)
-    case m => handleOtherMessages(m)
-  }
-
-  def handleOtherMessages: PartialFunction[Any, Unit] = {
-    case _ => Unit
   }
 
   def sendToBus(json: String) = {

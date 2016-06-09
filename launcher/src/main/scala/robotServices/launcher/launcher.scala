@@ -2,7 +2,7 @@ package robotServices.launcher
 
 import addInstruction.InstructionFiller
 import akka.actor.ActorSystem
-import akka.event.Logging
+//import akka.event.Logging
 import cycleStore.CycleAggregator
 import isWaitInstruction.IsWaitFiller
 import routineChange.RoutineExtractor
@@ -17,7 +17,7 @@ import waitChange.WaitChange
 object launcher extends App {
   implicit val system = ActorSystem()
   implicit val executor = system.dispatcher
-  val logger = Logging(system, "SimpleService")
+  //val logger = Logging(system, "SimpleService")
 
   val fillWithInstructionActor = system.actorOf(InstructionFiller.props)
   fillWithInstructionActor ! "connect"
@@ -45,6 +45,8 @@ object launcher extends App {
   testerActor ! "connect"*/
 
   scala.io.StdIn.readLine("Press ENTER to exit application.\n") match {
-    case x => system.terminate()
+    case x =>
+      println("Shutting down. This may take a while.")
+      system.terminate()
   }
 }

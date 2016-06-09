@@ -1,13 +1,10 @@
-enablePlugins(JavaAppPackaging, SbtOsgi)
+name := "lisa-robot-services"
 
-name := "robotServices"
-organization := "chalmers"
-version := "1.0"
 scalaVersion := "2.11.8"
 
 lazy val commonSettings = Seq(
   version := "1.0",
-
+  organization := "chalmers",
   scalaVersion := "2.11.8",
 
   scalacOptions := Seq("-unchecked", "-feature", "-deprecation", "-encoding", "utf8"),
@@ -27,6 +24,7 @@ lazy val commonSettings = Seq(
   },
     resolvers += "gphat" at "https://raw.github.com/gphat/mvn-repo/master/releases/"
 )
+
 lazy val root = project.in( file(".") ).
   aggregate(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
     robotTipDressWearService, waitChange, launcher)
@@ -65,41 +63,4 @@ lazy val launcher = project.
   dependsOn(robotPathService, robotIsWaitingService, robotRoutineChangeService, robotCycleStoreService,
     robotTipDressWearService, waitChange, workCellCycleChangeService).settings(commonSettings: _*)
 
-
-osgiSettings
-
-publishMavenStyle := true
-
-publishArtifact in Test := false
-
-pomIncludeRepository := { _ => false }
-
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
-
-pomExtra :=
-  <url>http://</url>
-    <licenses>
-      <license>
-        <name>Apache-2.0</name>
-        <url>http://opensource.org/licenses/Apache-2.0</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-    <scm>
-      <url>https://github.com/HenWahl</url>
-      <connection>scm:git:git@github.com:HenWahl/REPO.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <name>Daniel Nord</name>
-      </developer>
-      <developer>
-        <name>Henrik Wahlqvist</name>
-      </developer>
-    </developers>
+mainClass in assembly := Some("robotServices.launcher.launcher")
