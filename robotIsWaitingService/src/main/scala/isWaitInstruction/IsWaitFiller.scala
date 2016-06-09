@@ -47,16 +47,14 @@ class IsWaitFiller extends ServiceBase {
   def fill(event: PointerWithInstruction) = {
     val instruction: Instruction = event.instruction
     var isWaiting: Boolean = false
-    if (instruction.startsWith("Wait")) {
+    if (instruction.startsWith("Wait"))
       isWaiting = true
-    }
-    val filledEvent = PointerWithIsWaiting(event.robotId, event.workCellId,
-      event.address, instruction, isWaiting, event.programPointerPosition)
+    val filledEvent = PointerWithIsWaiting(event.robotId, event.workCellId,event.address, instruction, isWaiting,
+      event.programPointerPosition)
     val json: String = write(filledEvent)
     println("From isWaiting: " + json)
     sendToBus(json)
   }
-
 }
 
 object IsWaitFiller {

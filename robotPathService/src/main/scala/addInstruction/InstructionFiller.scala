@@ -19,10 +19,9 @@ class InstructionFiller extends ServiceBase {
   type Instruction = String
 
   // Maps
-  var robotMap: Map[RobotName, Map[TaskName, Map[ModuleName, Module]]] =
-    Map[RobotName, Map[TaskName, Map[ModuleName, Module]]]()
-  var taskMap: Map[TaskName, Map[ModuleName, Module]] = Map[TaskName, Map[ModuleName, Module]]()
-  var moduleMap: Map[ModuleName, Module] = Map[ModuleName, Module]()
+  var robotMap: Map[RobotName, Map[TaskName, Map[ModuleName, Module]]] = Map.empty
+  var taskMap: Map[TaskName, Map[ModuleName, Module]] = Map.empty
+  var moduleMap: Map[ModuleName, Module] = Map.empty
 
   // Functions
   def handleAmqMessage(json: JValue) = {
@@ -70,7 +69,6 @@ class InstructionFiller extends ServiceBase {
   def requestModules(event: PointerChangedEvent) = {
     import org.json4s.JsonDSL._
     val json = ("event" -> "newRobotEncountered") ~ ("robotId" -> event.robotId) ~ ("service" -> "instructionFiller")
-    println(s"Requesting modules for robot id ${event.robotId}." + json)
     sendToBus(write(json))
   }
 }

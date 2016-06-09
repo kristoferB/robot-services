@@ -42,7 +42,6 @@ class CycleChange extends ServiceBase {
       }
       initializeRobotStartFlagMap()
       getWorkCellsFlag = !getWorkCellsFlag
-      println("Got workCells: " + workCellMap.toString)
     } else {
       // do nothing... OR println("Received message of unmanageable type property.")
     }
@@ -102,7 +101,6 @@ class CycleChange extends ServiceBase {
     import org.json4s.JsonDSL._
     getWorkCellsFlag = !getWorkCellsFlag
     val json = ("event" -> "newWorkCellEncountered") ~ ("service" -> "cycleChange")
-    println(s"Requesting work cells.")
     sendToBus(write(json))
   }
 

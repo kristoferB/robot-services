@@ -22,7 +22,7 @@ class WaitChange extends ServiceBase {
   type ActivityId = UUID
 
   // State
-  var isWaiting = Map[RobotId, Option[ActivityId]]()
+  var isWaiting: Map[RobotId, Option[ActivityId]] = Map.empty
 
   // Functions
   def handleAmqMessage(json: JValue) = {

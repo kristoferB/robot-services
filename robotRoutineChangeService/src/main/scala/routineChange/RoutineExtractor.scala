@@ -21,8 +21,8 @@ class RoutineExtractor extends ServiceBase {
   val waitRoutines = config.getString("services.routineChange.waitRoutines")
 
   // Variables
-  var activityIdMap: Map[RobotName, Map[String, Id]] = Map[RobotName, Map[String, Id]]()
-  var priorEventMap: Map[RobotName, PointerChangedEvent] = Map[RobotName, PointerChangedEvent]()
+  var activityIdMap: Map[RobotName, Map[String, Id]] = Map.empty
+  var priorEventMap: Map[RobotName, PointerChangedEvent] = Map.empty
   val isStart: Boolean = true
   val jsonWaitRoutines = parse(waitRoutines)
   val listOfWaitRoutines: List[String] = jsonWaitRoutines.extract[List[String]]
@@ -54,7 +54,6 @@ class RoutineExtractor extends ServiceBase {
       val priorRoutine: String = priorEvent.programPointerPosition.position.routine
       val currentRoutine: String = event.programPointerPosition.position.routine
       if (!priorRoutine.equals(currentRoutine)) {
-        var json: String = ""
         activityIdMap = updateActivityIdMap(activityIdMap, event.robotId)
         val priorId = activityIdMap(event.robotId)("prior")
         val currentId = activityIdMap(event.robotId)("current")
@@ -62,7 +61,7 @@ class RoutineExtractor extends ServiceBase {
           val routineStopEvent =
             ActivityEvent(priorId, !isStart, priorRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
-          json = write(routineStopEvent)
+          val json = write(routineStopEvent)
           println("Previous routine: " + json)
           sendToBus(json)
         }
@@ -70,7 +69,7 @@ class RoutineExtractor extends ServiceBase {
           val routineStartEvent =
             ActivityEvent(currentId, isStart, currentRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
-          json = write(routineStartEvent)
+          val json = write(routineStartEvent)
           println("Current routine: " + json)
           sendToBus(json)
         }

@@ -3,7 +3,6 @@ package cycleStore
 import akka.actor._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq._
-import com.codemettle.reactivemq.model._
 import com.github.nscala_time.time.Imports._
 import core.ServiceBase
 import core.Domain._

@@ -18,11 +18,11 @@ class TipDressTransformer extends ServiceBase {
   type NrOfDeviations = Int
 
   // Variables
-  var counterMap: Map[RobotName, Int] = Map[RobotName, Int]()
+  var counterMap: Map[RobotName, Int] = Map.empty
   var currentSlope: Float = 0
-  var priorEventMap: Map[RobotName, Option[TipDressEvent]] = Map[RobotName, Option[TipDressEvent]]()
-  var averageSlopeMap: Map[RobotName, Option[Float]] = Map[RobotName, Option[Float]]()
-  var warnMap: Map[RobotName, NrOfDeviations] = Map[RobotName, NrOfDeviations]()
+  var priorEventMap: Map[RobotName, Option[TipDressEvent]] = Map.empty
+  var averageSlopeMap: Map[RobotName, Option[Float]] = Map.empty
+  var warnMap: Map[RobotName, NrOfDeviations] = Map.empty
 
   // Functions
   def handleAmqMessage(json: JValue) = {
@@ -38,9 +38,8 @@ class TipDressTransformer extends ServiceBase {
         currentSlope = differentiate(priorEvent.get, event)
         if (currentSlope <= 0)
           assessRiskOfCutterBreakdown(event)
-        else {
+        else
           reset(event)
-        }
       }
       assessWarningNeed(event)
     } else {
@@ -84,8 +83,7 @@ class TipDressTransformer extends ServiceBase {
     val nrOfWarnings: Int = warnMap(event.robotId)
     val warn: Boolean = nrOfWarnings == 3
     if (warn) {
-      val warningEvent: TipDressWarningEvent =
-        TipDressWarningEvent(event.robotId, event.workCellId, event.address, warn)
+      val warningEvent = TipDressWarningEvent(event.robotId, event.workCellId, event.address, warn)
       val json = write(warningEvent)
       sendToBus(json)
     }
