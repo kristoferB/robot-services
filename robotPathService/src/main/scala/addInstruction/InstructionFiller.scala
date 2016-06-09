@@ -1,6 +1,7 @@
 package addInstruction
 
 import akka.actor._
+import com.github.nscala_time.time.Imports._
 import core.ServiceBase
 import core.Domain._
 import core.Helpers._
@@ -13,15 +14,16 @@ import org.json4s.native.Serialization.write
 
 class InstructionFiller extends ServiceBase {
   // Type aliases
-  type RobotName = String
+  type RobotId = String
   type TaskName = String
   type ModuleName = String
   type Instruction = String
 
   // Maps
-  var robotMap: Map[RobotName, Map[TaskName, Map[ModuleName, Module]]] = Map.empty
+  var robotMap: Map[RobotId, Map[TaskName, Map[ModuleName, Module]]] = Map.empty
   var taskMap: Map[TaskName, Map[ModuleName, Module]] = Map.empty
   var moduleMap: Map[ModuleName, Module] = Map.empty
+  var timerMap: Map[RobotId, DateTime] = Map.empty
 
   // Functions
   def handleAmqMessage(json: JValue) = {
@@ -49,7 +51,7 @@ class InstructionFiller extends ServiceBase {
         if (robotMap(event.robotId)(eventPPPos.task).contains(eventPPPos.position.module)) {
           val module: Module = robotMap(event.robotId)(eventPPPos.task)(eventPPPos.position.module)
           val range: Range = eventPPPos.position.range
-          val instruction: Instruction = module.file(range.begin.row).
+          val instruction: Instruction = module.file(range.begin.row - 1).
             slice(range.begin.column - 1, range.end.column + 1)
           val filledEvent: PointerWithInstruction =
             PointerWithInstruction(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
@@ -62,13 +64,22 @@ class InstructionFiller extends ServiceBase {
       } else
         println(s"The system ${event.robotId} does not contain the task called" +
           s"${eventPPPos.task}")
-    } else
-      requestModules(event)
+    } else {
+      if (timerMap.contains(event.robotId)) {
+        if ((timerMap(event.robotId) to DateTime.now).millis < 60000) {
+          timerMap += (event.robotId -> DateTime.now)
+          requestModules(event.robotId)
+        }
+      } else {
+        timerMap += (event.robotId -> DateTime.now)
+        requestModules(event.robotId)
+      }
+    }
   }
 
-  def requestModules(event: PointerChangedEvent) = {
+  def requestModules(robotId: RobotId) = {
     import org.json4s.JsonDSL._
-    val json = ("event" -> "newRobotEncountered") ~ ("robotId" -> event.robotId) ~ ("service" -> "instructionFiller")
+    val json = ("event" -> "newRobotEncountered") ~ ("robotId" -> robotId) ~ ("service" -> "instructionFiller")
     sendToBus(write(json))
   }
 }
