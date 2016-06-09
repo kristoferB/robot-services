@@ -47,7 +47,7 @@ class IsWaitFiller extends ServiceBase {
   def fill(event: PointerWithInstruction) = {
     val instruction: Instruction = event.instruction
     var isWaiting: Boolean = false
-    if (instruction.startsWith("Wait"))
+    if (instruction.startsWith("Wait") || instruction.startsWith("ExecEngine"))
       isWaiting = true
     val filledEvent = PointerWithIsWaiting(event.robotId, event.workCellId,event.address, instruction, isWaiting,
       event.programPointerPosition)
