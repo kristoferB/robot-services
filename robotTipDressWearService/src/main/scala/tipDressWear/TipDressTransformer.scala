@@ -43,7 +43,7 @@ class TipDressTransformer extends ServiceBase {
       }
       assessWarningNeed(event)
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 

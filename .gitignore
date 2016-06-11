@@ -24,3 +24,4 @@ project/target/
 *.iws
 
 *.DS_Store
+log/

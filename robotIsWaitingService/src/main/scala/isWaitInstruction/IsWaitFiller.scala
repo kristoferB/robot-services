@@ -40,7 +40,7 @@ class IsWaitFiller extends ServiceBase {
       val event: PointerWithInstruction = json.extract[PointerWithInstruction]
       fill(event)
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 
@@ -52,7 +52,7 @@ class IsWaitFiller extends ServiceBase {
     val filledEvent = PointerWithIsWaiting(event.robotId, event.workCellId,event.address, instruction, isWaiting,
       event.programPointerPosition)
     val json: String = write(filledEvent)
-    println("From isWaiting: " + json)
+    log.info("From isWaiting: " + json)
     sendToBus(json)
   }
 }

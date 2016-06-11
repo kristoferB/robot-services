@@ -40,7 +40,7 @@ class InstructionFiller extends ServiceBase {
       val event: PointerChangedEvent = json.extract[PointerChangedEvent]
       fill(event)
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 
@@ -56,13 +56,13 @@ class InstructionFiller extends ServiceBase {
           val filledEvent: PointerWithInstruction =
             PointerWithInstruction(event.robotId, event.workCellId, event.address, instruction, eventPPPos)
           val json = write(filledEvent)
-          println("From instruction filler: " + json)
+          log.info("From instruction filler: " + json)
           sendToBus(json)
         } else
-          println(s"The system ${event.robotId} does not contain the module called" +
+          log.info(s"The system ${event.robotId} does not contain the module called" +
             s"${eventPPPos.position.module}")
       } else
-        println(s"The system ${event.robotId} does not contain the task called" +
+        log.info(s"The system ${event.robotId} does not contain the task called" +
           s"${eventPPPos.task}")
     } else {
       if (timerMap.contains(event.robotId)) {

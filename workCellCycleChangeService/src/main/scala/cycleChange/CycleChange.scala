@@ -3,7 +3,7 @@ package cycleChange
 import akka.actor._
 import core.Domain._
 import core.Helpers._
-import core.ServiceBase
+import core.{Config, ServiceBase}
 import org.json4s._
 import org.json4s.native.Serialization.write
 
@@ -19,7 +19,7 @@ class CycleChange extends ServiceBase {
   type WorkCellId = String
 
   // Config values
-  val signal = config.getString("services.cycleChange.signal")
+  val signal = Config.config.getString("services.cycleChange.signal")
 
   // State
   var getWorkCellsFlag: Boolean = true
@@ -46,7 +46,7 @@ class CycleChange extends ServiceBase {
       initializeRobotStartFlagMap()
       getWorkCellsFlag = !getWorkCellsFlag
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 
@@ -78,7 +78,7 @@ class CycleChange extends ServiceBase {
       val cycleId = cycleIdMap(event.workCellId)
       val outgoingCycleEvent = OutgoingCycleEvent(cycleId, isStart, event.time, event.workCellId)
       val json = write(outgoingCycleEvent)
-      println("From cycleChange: " + json)
+      log.info("From cycleChange: " + json)
       sendToBus(json)
     }
   }

@@ -2,7 +2,8 @@ package robotServices.launcher
 
 import addInstruction.InstructionFiller
 import akka.actor.ActorSystem
-//import akka.event.Logging
+import akka.event.{Logging, LoggingAdapter}
+import core.Config
 import cycleStore.CycleAggregator
 import isWaitInstruction.IsWaitFiller
 import routineChange.RoutineExtractor
@@ -16,28 +17,22 @@ import waitChange.WaitChange
 
 object launcher {
 
-  implicit var system: ActorSystem = null
+  implicit var system: ActorSystem = ActorSystem()
+  var log: LoggingAdapter = Logging(system, "launcher")
 
   def main(args: Array[String]): Unit = {
-    if (args.length > 0) {
-      if ("start".equals(args(0)))
-        start()
-      else if ("stop".equals(args(0)))
-        stop()
-      else if ("console".equals(args(0))) {
-        start()
-        scala.io.StdIn.readLine("Press any key to exit.\n")
-        stop()
-      }
-    }
+    startServices()
+    scala.io.StdIn.readLine("Press any key to exit.\n")
+    stop(Array.empty)
   }
 
-  private def start() = {
-    println("Starting")
+  def startServices() = {
+    log.info("Starting")
+    log.info("Base dir: " + Config.jarDir)
+    log.info("External config file: " + Config.extConfFile)
+    log.info("extConfFile.exists && !extConfFile.isDirectory: " + (Config.extConfFile.exists && !Config.extConfFile.isDirectory))
 
-    system = ActorSystem()
     implicit val executor = system.dispatcher
-    //val logger = Logging(system, "SimpleService")
 
     val fillWithInstructionActor = system.actorOf(InstructionFiller.props)
     fillWithInstructionActor ! "connect"
@@ -60,16 +55,24 @@ object launcher {
     val waitChangeActor = system.actorOf(WaitChange.props)
     waitChangeActor ! "connect"
 
-    println("Started")
+    log.info("Started")
 
     /*// Remove comment to test the system using the provided tester actor
     val testerActor = system.actorOf(robotServices.launcher.testMessageSender.props)
     testerActor ! "connect"*/
   }
 
-  private def stop() = {
-    println("Stopping")
+  var stopped = false
+
+  def start(args: Array[String]): Unit = {
+    startServices()
+    while(!stopped)
+      Thread.sleep(1000)
+  }
+
+  def stop(args: Array[String]): Unit = {
+    log.info("Stopping the services. This may take a while.")
+    stopped = true
     system.terminate()
-    println("Stopped")
   }
 }

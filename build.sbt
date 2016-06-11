@@ -19,7 +19,9 @@ lazy val commonSettings = Seq(
       "org.json4s" %% "json4s-jackson"                              % "3.3.0",
       "org.json4s" %% "json4s-ext"                                  % "3.3.0",
       "com.github.nscala-time" %% "nscala-time"                     % "1.8.0",
-      "wabisabi" %% "wabisabi"                                      % "2.1.4"
+      "wabisabi" %% "wabisabi"                                      % "2.1.4",
+      "com.typesafe.akka" %% "akka-slf4j" % "2.4.6",
+      "ch.qos.logback" % "logback-classic" % "1.1.7"
     )
   },
     resolvers += "gphat" at "https://raw.github.com/gphat/mvn-repo/master/releases/"

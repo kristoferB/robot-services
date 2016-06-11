@@ -45,7 +45,7 @@ class WaitChange extends ServiceBase {
         }
         val activityEvent = ActivityEvent(activityId.toString, event.isWaiting, event.instruction, event.robotId,
           event.programPointerPosition.time, "wait", event.workCellId)
-        println("From waitChange: " + activityEvent)
+        log.info("From waitChange: " + activityEvent)
         sendToBus(write(activityEvent))
       }
     } else {

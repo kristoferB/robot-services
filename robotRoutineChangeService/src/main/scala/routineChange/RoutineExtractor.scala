@@ -1,7 +1,7 @@
 package routineChange
 
 import akka.actor._
-import core.ServiceBase
+import core.{Config, ServiceBase}
 import core.Domain._
 import core.Helpers._
 import org.json4s._
@@ -18,7 +18,7 @@ class RoutineExtractor extends ServiceBase {
   type Id = String
 
   // Config file
-  val waitRoutines = config.getString("services.routineChange.waitRoutines")
+  val waitRoutines = Config.config.getString("services.routineChange.waitRoutines")
 
   // Variables
   var activityIdMap: Map[RobotName, Map[String, Id]] = Map.empty
@@ -34,7 +34,7 @@ class RoutineExtractor extends ServiceBase {
       activityIdMap = handleActivityIdMap(activityIdMap, event)
       handleEvent(event)
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 
@@ -62,7 +62,7 @@ class RoutineExtractor extends ServiceBase {
             ActivityEvent(priorId, !isStart, priorRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
           val json = write(routineStopEvent)
-          println("Previous routine: " + json)
+          log.info("Previous routine: " + json)
           sendToBus(json)
         }
         if (!isWaitingRoutine(currentRoutine)) {
@@ -70,7 +70,7 @@ class RoutineExtractor extends ServiceBase {
             ActivityEvent(currentId, isStart, currentRoutine, event.robotId, event.programPointerPosition.time,
               "routines", event.workCellId)
           val json = write(routineStartEvent)
-          println("Current routine: " + json)
+          log.info("Current routine: " + json)
           sendToBus(json)
         }
       }

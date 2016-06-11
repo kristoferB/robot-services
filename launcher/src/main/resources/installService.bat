@@ -1,19 +1,24 @@
+@echo off
 REM This script needs administrator privileges to execute successfully.
 REM Change the paths below to match your installation.
 
 set SERVICE_NAME=LISARobotServices
-set PR_INSTALL=C:\workspaces\blog\procrun-demo\prunsrv.exe
+
+REM Absolute path to Apache Commons Daemon prunsrv.exe
+set PR_INSTALL=C:\Program Files\Apache\commons-daemon\amd64\prunsrv.exe
 
 REM Service log configuration
 set PR_LOGPREFIX=%SERVICE_NAME%
 set PR_LOGPATH=c:\logs
 set PR_STDOUTPUT=c:\logs\stdout.txt
 set PR_STDERROR=c:\logs\stderr.txt
-set PR_LOGLEVEL=Error
+set PR_LOGLEVEL=Debug
 
-REM Path to java installation
-set PR_JVM=C:\Program Files (x86)\Java\jre7\bin\client\jvm.dll
-set PR_CLASSPATH=launcher-assembly-1.0
+REM Absolute path to Java jvm.dll
+set PR_JVM=C:\Program Files\Java\jre1.8.0_92\bin\server\jvm.dll
+
+REM Absolute path to the assembled launcher jar.
+set PR_CLASSPATH=C:\Users\Daniel\Utveckling\robot-services\launcher\target\scala-2.11\launcher-assembly-1.0.jar
 
 REM Startup configuration
 set PR_STARTUP=auto
@@ -33,10 +38,4 @@ set PR_JVMSS=4000
 set PR_JVMOPTIONS=-Duser.language=SV;-Duser.region=se
 
 REM Install the service
-prunsrv.exe //IS//%SERVICE_NAME%
-
-REM Run the service in debugging mode
-REM start prunsrv.exe //TS//%SERVICE_NAME%
-
-REM Uninstall the service
-REM prunsrv.exe //DS//%SERVICE_NAME%
+"C:\Program Files\Apache\commons-daemon\amd64\prunsrv.exe" //IS//%SERVICE_NAME%

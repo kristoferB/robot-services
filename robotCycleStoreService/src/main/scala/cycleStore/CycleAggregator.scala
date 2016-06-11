@@ -4,13 +4,14 @@ import akka.actor._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq._
 import com.github.nscala_time.time.Imports._
-import core.ServiceBase
+import core.{ServiceBase, Config}
 import core.Domain._
 import core.Helpers._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 import wabisabi._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.{Failure, Success}
@@ -39,7 +40,9 @@ class CycleAggregator extends ServiceBase {
 
   override def handleOtherMessages = {
     case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://$address:61616", user, pass)
+      val elasticIP = Config.config.getString("elastic.ip")
+      val elasticPort = Config.config.getString("elastic.port")
+      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://${Config.mqAddress}:61616", Config.mqUser, Config.mqPass)
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
   }
 
@@ -68,7 +71,7 @@ class CycleAggregator extends ServiceBase {
       val event: RobotCycleSearchQuery = json.extract[RobotCycleSearchQuery]
       retrieveFromES(event)
     } else {
-      // do nothing... OR println("Received message of unmanageable type property.")
+      // do nothing... OR log.info("Received message of unmanageable type property.")
     }
   }
 
@@ -161,7 +164,7 @@ class CycleAggregator extends ServiceBase {
           if (allRobotsInCycle(cycleStop.workCellId, activities)) {
             val cycleId = uuid
             val workCellCycle = WorkCellCycle(cycleStop.workCellId, cycleId, cycleStartTime, cycleStop.time, activities)
-            println("CycleAggregator sent to ES: " + workCellCycle)
+            log.info("CycleAggregator sent to ES: " + workCellCycle)
             val json = write(workCellCycle)
             sendToES(json, cycleId)
           }
@@ -229,12 +232,12 @@ class CycleAggregator extends ServiceBase {
         val searchResponse: Future[String] =
           client.search(index = "robot-cycle-store", query = jsonQuery.get).map(_.getResponseBody)
         searchResponse onComplete {
-          case Failure(e) => println("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
+          case Failure(e) => log.error("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
           case Success(cycles) =>
             val json = parse(cycles)
             if (json.has("error")) {
               val errorMessage = (json \ "error" \ "type").extract[String]
-              println(errorMessage)
+              log.info(errorMessage)
             } else {
               val hits: Int = (json \ "hits" \ "total").extract[Int]
               if (hits == 1) {
