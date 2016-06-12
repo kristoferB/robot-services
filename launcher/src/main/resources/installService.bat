@@ -43,4 +43,4 @@ REM Install the service
 "%PR_INSTALL%" //IS//%SERVICE_NAME%
 
 REM Configure delayed start (for ActiveMQ to start first)
-sc config "%SERVICE_NAME%" start=delayed-auto
+sc config "%SERVICE_NAME%" start= delayed-auto
