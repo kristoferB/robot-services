@@ -1,10 +1,12 @@
 @echo off
 REM This script needs administrator privileges to execute successfully.
 REM Change the paths below to match your installation.
+REM Service name must not contain any spaces
 
 set SERVICE_NAME=LISARobotServices
 
 REM Absolute path to Apache Commons Daemon prunsrv.exe
+REM REM If jvm is 64-bit, also use 64-bit prunsrv.
 set PR_INSTALL=C:\Program Files\Apache\commons-daemon\amd64\prunsrv.exe
 
 REM Service log configuration
@@ -38,4 +40,7 @@ set PR_JVMSS=4000
 set PR_JVMOPTIONS=-Duser.language=SV;-Duser.region=se
 
 REM Install the service
-"C:\Program Files\Apache\commons-daemon\amd64\prunsrv.exe" //IS//%SERVICE_NAME%
+"%PR_INSTALL%" //IS//%SERVICE_NAME%
+
+REM Configure delayed start (for ActiveMQ to start first)
+sc config "%SERVICE_NAME%" start=delayed-auto

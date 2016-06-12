@@ -18,10 +18,10 @@ sbt launcher/assembly
 The jar is output in launcher/target/scala-2.11.
 
 ## Install as a Windows service
-Generate an assembly. Download Apache Commons Daemon procrun.exe.
+Generate an assembly.
 Modify the paths in the launcher/src/main/resources/installService.bat file for your needs and execute it.
 
 ## Logging
 A log directory and file is created in the working directory.
 If run through IntelliJ/SBT, the log directory is created in the project root.
-If run as a service, the log directory is created in the same directory as procrun.exe.
+If run as a service, the log directory is created in the same directory as prunsrv.exe.
