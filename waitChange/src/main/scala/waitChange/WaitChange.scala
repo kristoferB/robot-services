@@ -38,7 +38,7 @@ class WaitChange extends ServiceBase {
       isWaiting += (event.robotId -> None)
     }
 
-    if (isWaiting(event.robotId).isDefined && !event.isWaiting) {
+    if (isWaiting(event.robotId).isDefined != event.isWaiting) {
       val (activityId, waitInstruction): (ActivityId, WaitInstruction) = if (event.isWaiting) {
         val id = UUID.randomUUID()
         isWaiting += (event.robotId -> Some((id, event.instruction)))
