@@ -20,9 +20,10 @@ class WaitChange extends ServiceBase {
   // Type aliases
   type RobotId = String
   type ActivityId = UUID
+  type WaitInstruction = String
 
   // State
-  var isWaiting: Map[RobotId, Option[ActivityId]] = Map.empty
+  var isWaiting: Map[RobotId, Option[(ActivityId, WaitInstruction)]] = Map.empty
 
   // Functions
   def handleAmqMessage(json: JValue) = {
@@ -32,28 +33,27 @@ class WaitChange extends ServiceBase {
 
   def checkIfWaitChange(json: JValue) = {
     val event: PointerWithIsWaiting = json.extract[PointerWithIsWaiting]
-    if (isWaiting.contains(event.robotId)) {
-      if (isWaiting(event.robotId).isDefined != event.isWaiting) {
-        val activityId = if (event.isWaiting) {
-          val id = UUID.randomUUID()
-          isWaiting += (event.robotId -> Some(id))
-          id
-        } else {
-          val id = isWaiting(event.robotId).get
-          isWaiting += (event.robotId -> None)
-          id
-        }
-        val activityEvent = ActivityEvent(activityId.toString, event.isWaiting, event.instruction, event.robotId,
-          event.programPointerPosition.time, "wait", event.workCellId)
-        log.info("From waitChange: " + activityEvent)
-        sendToBus(write(activityEvent))
-      }
-    } else {
-      if (event.isWaiting)
-        isWaiting += (event.robotId -> Some(UUID.randomUUID()))
-      else
-        isWaiting += (event.robotId -> None)
+
+    if (!isWaiting.contains(event.robotId)) {
+      isWaiting += (event.robotId -> None)
     }
+
+    if (isWaiting(event.robotId).isDefined && !event.isWaiting) {
+      val (activityId, waitInstruction): (ActivityId, WaitInstruction) = if (event.isWaiting) {
+        val id = UUID.randomUUID()
+        isWaiting += (event.robotId -> Some((id, event.instruction)))
+        (id, event.instruction)
+      } else {
+        val (id, instruction) = isWaiting(event.robotId).get
+        isWaiting += (event.robotId -> None)
+        (id, instruction)
+      }
+      val activityEvent = ActivityEvent(activityId.toString, event.isWaiting, waitInstruction, event.robotId,
+        event.programPointerPosition.time, "wait", event.workCellId)
+      log.info("From waitChange: " + activityEvent)
+      sendToBus(write(activityEvent))
+    }
+
   }
 }
 
