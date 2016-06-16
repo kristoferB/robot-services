@@ -18,7 +18,7 @@ class RoutineExtractor extends ServiceBase {
   type Id = String
 
   // Config file
-  val waitRoutines = Config.config.getStringList("services.routineChange.waitRoutines")
+  val waitRoutines = Config.config.getStringList("services.routineChange.routinesToIgnore")
 
   // Variables
   var activityIdMap: Map[RobotName, Map[String, Id]] = Map.empty

@@ -30,6 +30,7 @@ class CycleAggregator extends ServiceBase {
 
   // Elasticsearch
   var elasticClient: Option[Client] = None
+  final val index = "robot-cycle-store"
 
   // Maps
   var cycleEventsMap: Map[RobotId, Map[ActivityType, ActivityEvents]] = Map.empty
@@ -44,6 +45,7 @@ class CycleAggregator extends ServiceBase {
       val elasticPort = Config.config.getString("elastic.port")
       ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://${Config.mqAddress}:61616", Config.mqUser, Config.mqPass)
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
+      elasticClient.foreach(client => client.createIndex(index))
   }
 
   def handleAmqMessage(json: JValue): Unit = {
@@ -207,7 +209,7 @@ class CycleAggregator extends ServiceBase {
 
   def sendToES(json: String, cycleId: String) = {
     elasticClient.foreach{client => client.index(
-      index = "robot-cycle-store", `type` = "cycles", id = Some(cycleId),
+      index = index, `type` = "cycles", id = Some(cycleId),
       data = json, refresh = true
     )}
   }
@@ -230,7 +232,7 @@ class CycleAggregator extends ServiceBase {
     if (jsonQuery.isDefined) {
       elasticClient.foreach{client =>
         val searchResponse: Future[String] =
-          client.search(index = "robot-cycle-store", query = jsonQuery.get).map(_.getResponseBody)
+          client.search(index = index, query = jsonQuery.get).map(_.getResponseBody)
         searchResponse onComplete {
           case Failure(e) => log.error("An error has occurred while retrieving cycles from elastic: " + e.getMessage)
           case Success(cycles) =>
