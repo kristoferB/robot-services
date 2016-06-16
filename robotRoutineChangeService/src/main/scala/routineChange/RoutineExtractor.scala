@@ -18,14 +18,12 @@ class RoutineExtractor extends ServiceBase {
   type Id = String
 
   // Config file
-  val waitRoutines = Config.config.getString("services.routineChange.waitRoutines")
+  val waitRoutines = Config.config.getStringList("services.routineChange.waitRoutines")
 
   // Variables
   var activityIdMap: Map[RobotName, Map[String, Id]] = Map.empty
   var priorEventMap: Map[RobotName, PointerChangedEvent] = Map.empty
   val isStart: Boolean = true
-  val jsonWaitRoutines = parse(waitRoutines)
-  val listOfWaitRoutines: List[String] = jsonWaitRoutines.extract[List[String]]
 
   // Functions
   def handleAmqMessage(json: JValue) = {
@@ -87,7 +85,7 @@ class RoutineExtractor extends ServiceBase {
 
   def isWaitingRoutine(routineName: String): Boolean = {
     var flag = false
-    if (listOfWaitRoutines.contains(routineName))
+    if (waitRoutines.contains(routineName))
       flag = true
     flag
   }
