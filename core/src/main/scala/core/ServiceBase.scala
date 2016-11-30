@@ -30,11 +30,13 @@ trait ServiceBase extends Actor {
 
   def handleBasicMessages: PartialFunction[Any, Unit] = {
     case "connect" =>
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://${Config.mqAddress}:61616", Config.mqUser, Config.mqPass)
+      log.info(s"connecting ${Config.mqAddress}")
+      ReActiveMQExtension(context.system).manager ! GetConnection(s"nio://${Config.mqAddress}:61616")
     case ConnectionEstablished(request, c) =>
       log.info("Connected: " + request)
       c ! ConsumeFromTopic(Config.mqTopic)
       theBus = Some(c)
+      log.info("bus" + theBus)
     case ConnectionFailed(request, reason) =>
       log.error("Connection failed: " + reason)
     case mess @ AMQMessage(body, prop, headers) =>
@@ -43,6 +45,7 @@ trait ServiceBase extends Actor {
   }
 
   def sendToBus(json: String) = {
+    
     theBus.foreach{bus => bus ! SendMessage(Topic(Config.mqTopic), AMQMessage(json))}
   }
 

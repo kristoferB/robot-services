@@ -4,7 +4,7 @@ import akka.actor._
 import com.codemettle.reactivemq.ReActiveMQMessages._
 import com.codemettle.reactivemq._
 import com.github.nscala_time.time.Imports._
-import core.{ServiceBase, Config}
+import core.{Config, ServiceBase}
 import core.Domain._
 import core.Helpers._
 import org.json4s._
@@ -12,6 +12,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization.write
 import wabisabi._
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.{Failure, Success}
@@ -43,12 +44,13 @@ class CycleAggregator extends ServiceBase {
     case "connect" =>
       val elasticIP = Config.config.getString("elastic.ip")
       val elasticPort = Config.config.getString("elastic.port")
-      ReActiveMQExtension(context.system).manager ! GetAuthenticatedConnection(s"nio://${Config.mqAddress}:61616", Config.mqUser, Config.mqPass)
+      ReActiveMQExtension(context.system).manager ! GetConnection(s"nio://${Config.mqAddress}:61616")
       elasticClient = Some(new Client(s"http://$elasticIP:$elasticPort"))
       elasticClient.foreach(client => client.createIndex(index))
   }
 
   def handleAmqMessage(json: JValue): Unit = {
+    
     if (json.has("isStart") && json.has("cycleId")) {
       val event: OutgoingCycleEvent = json.extract[OutgoingCycleEvent]
       if (event.isStart) {
@@ -70,11 +72,56 @@ class CycleAggregator extends ServiceBase {
         earlyOrLateEventsMap = addToEventMap(earlyOrLateEventsMap, event)
       }
     } else if (json.has("timeSpan")) {
+      println("got timestamp" + json)
       val event: RobotCycleSearchQuery = json.extract[RobotCycleSearchQuery]
       retrieveFromES(event)
-    } else {
+    } else if(json.has("foundCycles")){
+      println("Found cycles in CycleAggregator")
+      val resp: RobotCyclesResponse = json.extract[RobotCyclesResponse]
+      extractCycles(resp.foundCycles.get.head)
+      }else{
       // do nothing... OR log.info("Received message of unmanageable type property.")
     }
+  }
+
+  def extractCycles(resp:WorkCellCycle)={
+    var knownActivities = new ListBuffer[Activity]()
+    val idWorkcell = resp.workCellId
+    val startTime = resp.from
+    println("start time: "+startTime)
+    println("to time: "+resp.to)
+    var time = startTime
+    while (time < resp.to){
+      val enabledActivities = resp.activities.map{
+        activity => activity._1 -> activity._2.flatMap(_._2.filter(x=> (x.from <= time) && (time <=x.to))).toList
+      }
+
+      
+      val eventList = enabledActivities.flatMap(en => en._2.map{
+        x =>
+          val isStart = knownActivities.contains(x)
+          knownActivities.append(x)
+          ActivityEvent(x.id,!isStart,x.name,en._1,DateTime.now,x.`type`,idWorkcell)
+
+      }).toList
+
+      
+
+      
+      for (event <- eventList){
+        sendToBus(write(event))
+        
+      }
+      time = time + 100.millis
+      println("time:" + time)
+      Thread.sleep(500)
+
+    }
+
+println("end of while")
+
+    
+
   }
 
   override def postStop() = {
@@ -168,7 +215,7 @@ class CycleAggregator extends ServiceBase {
             val workCellCycle = WorkCellCycle(cycleStop.workCellId, cycleId, cycleStartTime, cycleStop.time, activities)
             log.info("CycleAggregator sent to ES: " + workCellCycle)
             val json = write(workCellCycle)
-            sendToES(json, cycleId)
+            //sendToES(json, cycleId)
           }
       }
     }
@@ -216,6 +263,7 @@ class CycleAggregator extends ServiceBase {
 
   def retrieveFromES(event: RobotCycleSearchQuery) = {
     var jsonQuery: Option[String] = None
+    println("got event" + event)
     if (event.cycleId.isDefined) {
       jsonQuery = Some("{ \"size\" : 20, \"query\": { \"match\" : { \"entryId\" : \"" +
         s"${event.cycleId.get}" +
@@ -252,6 +300,7 @@ class CycleAggregator extends ServiceBase {
                 val extractedCycles = (json \ "hits" \ "hits" \ "_source").extract[List[WorkCellCycle]]
                 val robotCyclesResponse = RobotCyclesResponse(s"${event.workCellId}", None, Some(extractedCycles))
                 val jsonResponse = write(robotCyclesResponse)
+                log.info(jsonResponse)
                 sendToBus(jsonResponse)
               }
             }
